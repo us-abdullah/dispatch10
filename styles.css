@@ -11,14 +11,17 @@ body {
     color: #ffffff;
     line-height: 1.6;
     overflow-x: hidden;
+    overflow-y: auto;
+    height: 100vh;
 }
 
 /* App Container */
 .app-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
     background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+    overflow-y: auto;
 }
 
 /* Header */
@@ -427,6 +430,58 @@ body {
     background: rgba(0, 0, 0, 0.3);
     border-radius: 8px;
     padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Routing Suggestions in Center Panel */
+.center-panel .routing-suggestions {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.center-panel .routing-suggestions h3 {
+    color: #fff;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.center-panel .routing-content {
+    color: #ccc;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Export Controls in Center Panel */
+.center-panel .export-controls {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.center-panel .export-controls .btn-export {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    color: #fff;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.center-panel .export-options {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.center-panel .export-options label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #ccc;
+    font-size: 0.9rem;
+    cursor: pointer;
 }
 
 .bullet-summary h3 {
