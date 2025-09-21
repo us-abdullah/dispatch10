@@ -43,6 +43,26 @@
             background: #555;
         }
 
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .refresh-btn {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .refresh-btn:hover {
+            background: #0088ff;
+        }
+
         .routing-content {
             display: flex;
             flex: 1;
@@ -227,7 +247,10 @@
     <div class="routing-page">
         <div class="routing-header">
             <div class="routing-title">DispatchAI - Call Queue & Routing</div>
-            <button class="back-btn" id="backBtn">← Back to Dispatch</button>
+            <div class="header-controls">
+                <button class="refresh-btn" id="refreshBtn">🔄 Refresh</button>
+                <button class="back-btn" id="backBtn">← Back to Dispatch</button>
+            </div>
         </div>
 
         <div class="routing-content">

@@ -185,6 +185,7 @@ class DispatchAI {
             this.recognition.start();
             this.startRetentionTimer();
             this.startDispatchTimer();
+            this.createNewCall();
             this.showNotification('Call started - listening for audio', 2000);
         } catch (error) {
             this.showError('Failed to start speech recognition');
@@ -196,6 +197,7 @@ class DispatchAI {
         this.isRecording = false;
         this.recognition.stop();
         this.stopDispatchTimer();
+        this.completeCurrentCall();
         this.updateStatus('Ready', 'ready');
         this.startCallBtn.disabled = false;
         this.stopCallBtn.disabled = true;
@@ -309,6 +311,9 @@ class DispatchAI {
             this.updateQuestions(analysis.questions);
             this.updateClassification(analysis.classification);
             this.updateRouting(analysis.routing);
+            
+            // Update current call with new data
+            this.updateCurrentCall(analysis);
             
             // Show completion notification
             const aiType = this.ollama.isAvailable ? 'Ollama AI' : 'Mock AI';
@@ -893,12 +898,84 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
         this.routeBtn.disabled = true;
     }
 
+    createNewCall() {
+        this.currentCallId = Date.now();
+        const callData = {
+            callId: this.currentCallId,
+            callerId: this.generateCallerId(),
+            urgentBrief: 'Call in progress...',
+            priority: 'Low',
+            category: 'Police',
+            startTime: new Date(),
+            status: 'In Progress',
+            transcript: '',
+            classification: {},
+            routing: []
+        };
+
+        // Store in active calls
+        this.storeActiveCall(callData);
+        
+        // Notify routing page if open
+        this.notifyRoutingPage('newCall', callData);
+    }
+
+    completeCurrentCall() {
+        if (!this.currentCallId) return;
+
+        const dispatchTime = this.getDispatchTime();
+        const callData = {
+            callId: this.currentCallId,
+            callerId: this.generateCallerId(),
+            urgentBrief: this.currentIncident?.urgentBrief || 'Call completed',
+            priority: this.currentIncident?.classification?.priority || 'Low',
+            category: this.currentIncident?.classification?.category || 'Police',
+            startTime: new Date(Date.now() - (dispatchTime * 1000)),
+            endTime: new Date(),
+            status: 'Completed',
+            transcript: this.transcript.map(entry => entry.text).join(' '),
+            classification: this.currentIncident?.classification || {},
+            routing: this.currentIncident?.routing || [],
+            dispatchTime: dispatchTime,
+            outcome: 'Resolved'
+        };
+
+        // Remove from active calls
+        this.removeActiveCall(this.currentCallId);
+        
+        // Add to completed calls
+        this.storeCompletedCall(callData);
+        
+        // Notify routing page if open
+        this.notifyRoutingPage('callCompleted', callData);
+        
+        this.currentCallId = null;
+    }
+
+    generateCallerId() {
+        const prefixes = ['CALL', 'EMRG', 'DISP', 'URGT'];
+        const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+        const number = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+        return `${prefix}-${number}`;
+    }
+
+    storeActiveCall(callData) {
+        const activeCalls = JSON.parse(localStorage.getItem('dispatchAI_activeCalls') || '[]');
+        activeCalls.push(callData);
+        localStorage.setItem('dispatchAI_activeCalls', JSON.stringify(activeCalls));
+    }
+
+    removeActiveCall(callId) {
+        const activeCalls = JSON.parse(localStorage.getItem('dispatchAI_activeCalls') || '[]');
+        const filteredCalls = activeCalls.filter(call => call.callId !== callId);
+        localStorage.setItem('dispatchAI_activeCalls', JSON.stringify(filteredCalls));
+    }
+
     storeCompletedCall(callData) {
         const completedCalls = JSON.parse(localStorage.getItem('dispatchAI_completedCalls') || '[]');
         completedCalls.unshift({
             ...callData,
-            timestamp: new Date().toISOString(),
-            outcome: 'Exported Pack'
+            timestamp: new Date().toISOString()
         });
         
         // Keep only last 50 calls
@@ -907,6 +984,48 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
         }
         
         localStorage.setItem('dispatchAI_completedCalls', JSON.stringify(completedCalls));
+    }
+
+    updateCurrentCall(analysis) {
+        if (!this.currentCallId) return;
+
+        const callData = {
+            callId: this.currentCallId,
+            urgentBrief: analysis.urgentBrief,
+            priority: analysis.classification?.priority || 'Low',
+            category: analysis.classification?.category || 'Police',
+            classification: analysis.classification,
+            routing: analysis.routing,
+            transcript: this.transcript.map(entry => entry.text).join(' ')
+        };
+
+        // Update in active calls
+        this.updateActiveCall(this.currentCallId, callData);
+        
+        // Notify routing page if open
+        this.notifyRoutingPage('updateCall', { callId: this.currentCallId, callData });
+    }
+
+    updateActiveCall(callId, callData) {
+        const activeCalls = JSON.parse(localStorage.getItem('dispatchAI_activeCalls') || '[]');
+        const callIndex = activeCalls.findIndex(call => call.callId === callId);
+        
+        if (callIndex !== -1) {
+            activeCalls[callIndex] = { ...activeCalls[callIndex], ...callData };
+            localStorage.setItem('dispatchAI_activeCalls', JSON.stringify(activeCalls));
+        }
+    }
+
+    notifyRoutingPage(type, data) {
+        // Try to notify any open routing pages
+        if (window.opener) {
+            window.opener.postMessage({ type, data }, '*');
+        }
+        
+        // Also try to notify parent window
+        if (window.parent !== window) {
+            window.parent.postMessage({ type, data }, '*');
+        }
     }
 
     async testOllama() {

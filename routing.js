@@ -14,6 +14,7 @@ class CallQueueManager {
         this.activeCallsQueue = document.getElementById('activeCallsQueue');
         this.callHistory = document.getElementById('callHistory');
         this.backBtn = document.getElementById('backBtn');
+        this.refreshBtn = document.getElementById('refreshBtn');
     }
 
     setupEventListeners() {
@@ -21,36 +22,79 @@ class CallQueueManager {
             window.location.href = 'index.html';
         });
 
+        this.refreshBtn.addEventListener('click', () => {
+            this.loadFromStorage();
+            this.showNotification('Data refreshed', 1000);
+        });
+
         // Listen for messages from main page
         window.addEventListener('message', (event) => {
+            console.log('Received message:', event.data);
             if (event.data.type === 'newCall') {
-                this.addActiveCall(event.data.callData);
+                this.addActiveCall(event.data.data);
+            } else if (event.data.type === 'callCompleted') {
+                this.addCompletedCall(event.data.data);
+            } else if (event.data.type === 'updateCall') {
+                this.updateActiveCall(event.data.data.callId, event.data.data.callData);
             } else if (event.data.type === 'routeCall') {
                 this.routeCall(event.data.callId);
-            } else if (event.data.type === 'updateCall') {
-                this.updateActiveCall(event.data.callId, event.data.callData);
+            }
+        });
+
+        // Also listen for storage changes (for when main page updates localStorage)
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'dispatchAI_activeCalls' || event.key === 'dispatchAI_completedCalls') {
+                this.loadFromStorage();
             }
         });
     }
 
     addActiveCall(callData) {
-        const callId = this.callIdCounter++;
         const call = {
-            id: callId,
-            callerId: this.generateCallerId(),
+            id: callData.callId || this.callIdCounter++,
+            callerId: callData.callerId || this.generateCallerId(),
             urgentBrief: callData.urgentBrief || 'No brief available',
             priority: callData.priority || 'Low',
             category: callData.category || 'Police',
-            startTime: new Date(),
+            startTime: new Date(callData.startTime),
             status: 'In Progress',
             transcript: callData.transcript || '',
             classification: callData.classification || {},
             routing: callData.routing || []
         };
 
-        this.activeCalls.push(call);
-        this.startTimer(callId);
+        // Check if call already exists
+        const existingIndex = this.activeCalls.findIndex(c => c.id === call.id);
+        if (existingIndex !== -1) {
+            this.activeCalls[existingIndex] = call;
+        } else {
+            this.activeCalls.push(call);
+            this.startTimer(call.id);
+        }
+        
         this.renderActiveCalls();
+        this.saveToStorage();
+    }
+
+    addCompletedCall(callData) {
+        const call = {
+            id: callData.callId || this.callIdCounter++,
+            callerId: callData.callerId || this.generateCallerId(),
+            urgentBrief: callData.urgentBrief || 'No brief available',
+            priority: callData.priority || 'Low',
+            category: callData.category || 'Police',
+            startTime: new Date(callData.startTime),
+            endTime: new Date(callData.endTime),
+            status: 'Completed',
+            transcript: callData.transcript || '',
+            classification: callData.classification || {},
+            routing: callData.routing || [],
+            dispatchTime: callData.dispatchTime || 0,
+            outcome: callData.outcome || 'Resolved'
+        };
+
+        this.completedCalls.unshift(call);
+        this.renderCallHistory();
         this.saveToStorage();
     }
 
@@ -277,6 +321,32 @@ class CallQueueManager {
         `;
         
         document.body.appendChild(modal);
+    }
+
+    showNotification(message, duration = 2000) {
+        // Simple notification system
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #0066cc;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            z-index: 1000;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        `;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, duration);
     }
 
     saveToStorage() {
