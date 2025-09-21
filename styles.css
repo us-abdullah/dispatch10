@@ -40,10 +40,12 @@ body {
 }
 
 .header h1 {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #ffffff;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    font-size: 2.2rem;
+    font-weight: 300;
+    color: #ff4444;
+    text-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+    letter-spacing: 3px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .status-indicator {

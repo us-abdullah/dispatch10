@@ -30,7 +30,6 @@ class DispatchAI {
         this.clearAllDataBtn = document.getElementById('clearAllDataBtn');
         this.routingBtn = document.getElementById('routingBtn');
         this.routeBtn = document.getElementById('routeBtn');
-        this.testOllamaBtn = document.getElementById('testOllamaBtn');
 
         // Notification elements
         this.notificationToast = document.getElementById('notificationToast');
@@ -99,8 +98,6 @@ class DispatchAI {
         this.routingBtn.addEventListener('click', () => this.openRoutingPage());
         this.routeBtn.addEventListener('click', () => this.routeCall());
 
-        // Test Ollama
-        this.testOllamaBtn.addEventListener('click', () => this.testOllama());
 
 
         // Notification close
@@ -708,11 +705,29 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
     }
 
     clearAllData() {
-        if (confirm('This will clear all data. Are you sure?')) {
+        if (confirm('This will clear all data including call queue and history. Are you sure?')) {
             this.clearTranscript();
             this.stopCall();
-            this.showNotification('All data cleared', 2000);
+            this.clearCallQueueData();
+            this.showNotification('All data cleared including call queue', 2000);
         }
+    }
+
+    clearCallQueueData() {
+        // Clear active calls
+        localStorage.removeItem('dispatchAI_activeCalls');
+        
+        // Clear completed calls
+        localStorage.removeItem('dispatchAI_completedCalls');
+        
+        // Reset current call
+        this.currentCallId = null;
+        this.dispatchStartTime = null;
+        
+        // Notify routing page if open
+        this.notifyRoutingPage('clearAllData', {});
+        
+        console.log('Call queue data cleared');
     }
 
     startRetentionTimer() {

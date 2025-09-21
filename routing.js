@@ -46,6 +46,8 @@ class CallQueueManager {
                 this.updateActiveCall(event.data.data.callId, event.data.data.callData);
             } else if (event.data.type === 'routeCall') {
                 this.routeCall(event.data.callId);
+            } else if (event.data.type === 'clearAllData') {
+                this.clearAllData();
             }
         });
 
@@ -336,6 +338,29 @@ class CallQueueManager {
         `;
         
         document.body.appendChild(modal);
+    }
+
+    clearAllData() {
+        // Clear all active calls
+        this.activeCalls = [];
+        
+        // Clear all completed calls
+        this.completedCalls = [];
+        
+        // Clear all timers
+        this.timers.forEach(timer => clearInterval(timer));
+        this.timers.clear();
+        
+        // Clear localStorage
+        localStorage.removeItem('dispatchAI_activeCalls');
+        localStorage.removeItem('dispatchAI_completedCalls');
+        
+        // Re-render empty state
+        this.renderActiveCalls();
+        this.renderCallHistory();
+        
+        this.showNotification('Call queue and history cleared', 2000);
+        console.log('All call queue data cleared');
     }
 
     showNotification(message, duration = 2000) {
