@@ -87,7 +87,7 @@ class OllamaIntegration {
         // If Ollama is not available, use real-world data-driven analysis
         if (!this.isAvailable) {
             console.log('Using real-world data-driven analysis');
-            return this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
+            return await this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
         }
 
         const prompt = `You are an AI assistant for 911 dispatch trained on real NYC, Seattle, and NENA datasets. Analyze this emergency call transcript and provide a structured response in JSON format.
@@ -145,11 +145,11 @@ Focus on emergency response needs using real-world data patterns. Be concise and
                 return enhanced;
             } else {
                 console.log('Failed to parse Ollama response, using data-driven analysis');
-                return this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
+                return await this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
             }
         } catch (error) {
             console.error('Error analyzing incident with Ollama:', error);
-            return this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
+            return await this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
         }
     }
 
@@ -514,7 +514,7 @@ Consider the severity and type of incident.`;
         return routing;
     }
 
-    generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis) {
+    async generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis) {
         // Generate analysis based on real-world data
         const baseUrgentBrief = this.generateUrgentBriefFromData(realWorldAnalysis, dataAnalysis);
         const detailedSummary = this.generateDetailedAISummary(transcript, realWorldAnalysis);
