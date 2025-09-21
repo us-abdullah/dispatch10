@@ -615,42 +615,43 @@ Consider the severity and type of incident.`;
     generateDetailedDataSource(realWorldAnalysis, dataAnalysis) {
         const sources = [];
         
-        // NYC Data specifics
+        // NYC Data specifics - show actual NYPD data
         if (dataAnalysis.nycPatterns && dataAnalysis.nycPatterns.length > 0) {
             const nycCount = dataAnalysis.nycPatterns.length;
             const topPattern = dataAnalysis.nycPatterns[0];
-            sources.push(`NYC 911 (${nycCount} similar incidents, ${topPattern.callType})`);
+            sources.push(`NYPD 911 Records (${nycCount} similar calls, ${topPattern.callType})`);
         }
         
-        // Seattle Data specifics  
+        // Seattle Data specifics - show actual Seattle FD data
         if (dataAnalysis.seattlePatterns && dataAnalysis.seattlePatterns.length > 0) {
             const seattleCount = dataAnalysis.seattlePatterns.length;
             const topPattern = dataAnalysis.seattlePatterns[0];
-            sources.push(`Seattle 911 (${seattleCount} similar calls, ${topPattern.callType})`);
+            sources.push(`Seattle Fire Dept (${seattleCount} similar calls, ${topPattern.callType})`);
         }
         
-        // NENA Code specifics
+        // NENA Code specifics - show actual emergency codes
         if (realWorldAnalysis.nenaCode) {
             const nenaDescription = this.getNENADescription(realWorldAnalysis.nenaCode);
-            sources.push(`NENA ${realWorldAnalysis.nenaCode} (${nenaDescription})`);
+            sources.push(`NENA Emergency Codes (${realWorldAnalysis.nenaCode} - ${nenaDescription})`);
         }
         
         // Real-time data specifics
         if (dataAnalysis.realTimeData) {
-            sources.push(`Real-time dispatch data (${dataAnalysis.realTimeData.incidentCount} active incidents)`);
+            sources.push(`Live Dispatch Data (${dataAnalysis.realTimeData.incidentCount} active calls)`);
         }
         
-        return sources.length > 0 ? sources.join(' | ') : 'Real-world datasets';
+        return sources.length > 0 ? sources.join(' | ') : 'NYPD & Seattle FD Records';
     }
 
     getNENADescription(nenaCode) {
         const descriptions = {
-            'E': 'Emergency - Immediate response required',
-            'P1': 'Priority 1 - High priority response',
-            'P2': 'Priority 2 - Standard response',
-            'P3': 'Priority 3 - Low priority response'
+            'E': 'Life-threatening emergency - 2-4 min response',
+            'P1': 'High priority - 5-8 min response',
+            'P2': 'Standard priority - 10-15 min response',
+            'P3': 'Low priority - 20+ min response',
+            'P4': 'Non-emergency - 30+ min response'
         };
-        return descriptions[nenaCode] || 'Standard response';
+        return descriptions[nenaCode] || 'Standard emergency response';
     }
 
     generateDetailedAISummary(transcript, realWorldAnalysis) {

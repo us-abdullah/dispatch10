@@ -1,0 +1,14 @@
+# Ignore large data files
+seattle.csv
+*.csv
+Sources/seattle.csv
+
+# Ignore development files
+test-ollama.html
+LIVE-AI-DEMO.md
+OLLAMA-SETUP.md
+server-setup.md
+demo-scenarios.md
+
+# Ignore documentation
+REAL-WORLD-DATA-INTEGRATION.md
