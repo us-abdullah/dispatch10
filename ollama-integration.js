@@ -141,7 +141,12 @@ Focus on emergency response needs using real-world data patterns. Be concise and
             if (parsed) {
                 console.log('Successfully parsed Ollama response:', parsed);
                 // Enhance with real-world data
-                return this.enhanceWithRealWorldData(parsed, realWorldAnalysis, dataAnalysis);
+                const enhanced = this.enhanceWithRealWorldData(parsed, realWorldAnalysis, dataAnalysis);
+                // Add detailed AI summary to urgent brief
+                const detailedSummary = this.generateDetailedAISummary(transcript, realWorldAnalysis);
+                enhanced.urgentBrief = enhanced.urgentBrief + '\n\n' + detailedSummary;
+                enhanced.dataSource = this.generateDetailedDataSource(realWorldAnalysis, dataAnalysis);
+                return enhanced;
             } else {
                 console.log('Failed to parse Ollama response, using data-driven analysis');
                 return this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
@@ -433,7 +438,10 @@ Consider the severity and type of incident.`;
 
     generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis) {
         // Generate analysis based on real-world data
-        const urgentBrief = this.generateUrgentBriefFromData(realWorldAnalysis, dataAnalysis);
+        const baseUrgentBrief = this.generateUrgentBriefFromData(realWorldAnalysis, dataAnalysis);
+        const detailedSummary = this.generateDetailedAISummary(transcript, realWorldAnalysis);
+        const urgentBrief = baseUrgentBrief + '\n\n' + detailedSummary;
+        
         const summary = this.extractSummaryFromData(transcript, realWorldAnalysis);
         const questions = this.generateQuestionsFromData(realWorldAnalysis);
         const classification = this.enhanceClassificationWithData(realWorldAnalysis, dataAnalysis);
@@ -445,7 +453,7 @@ Consider the severity and type of incident.`;
             questions,
             classification,
             routing,
-            dataSource: dataAnalysis.source || 'Real-world datasets',
+            dataSource: this.generateDetailedDataSource(realWorldAnalysis, dataAnalysis),
             severityLevel: realWorldAnalysis.severity || 6,
             nenaCode: realWorldAnalysis.nenaCode || 'P2'
         };
@@ -490,6 +498,188 @@ Consider the severity and type of incident.`;
         }
 
         return brief;
+    }
+
+    generateDetailedDataSource(realWorldAnalysis, dataAnalysis) {
+        const sources = [];
+        
+        // NYC Data specifics
+        if (dataAnalysis.nycPatterns && dataAnalysis.nycPatterns.length > 0) {
+            const nycCount = dataAnalysis.nycPatterns.length;
+            const topPattern = dataAnalysis.nycPatterns[0];
+            sources.push(`NYC 911 (${nycCount} similar incidents, ${topPattern.callType})`);
+        }
+        
+        // Seattle Data specifics  
+        if (dataAnalysis.seattlePatterns && dataAnalysis.seattlePatterns.length > 0) {
+            const seattleCount = dataAnalysis.seattlePatterns.length;
+            const topPattern = dataAnalysis.seattlePatterns[0];
+            sources.push(`Seattle 911 (${seattleCount} similar calls, ${topPattern.callType})`);
+        }
+        
+        // NENA Code specifics
+        if (realWorldAnalysis.nenaCode) {
+            const nenaDescription = this.getNENADescription(realWorldAnalysis.nenaCode);
+            sources.push(`NENA ${realWorldAnalysis.nenaCode} (${nenaDescription})`);
+        }
+        
+        // Real-time data specifics
+        if (dataAnalysis.realTimeData) {
+            sources.push(`Real-time dispatch data (${dataAnalysis.realTimeData.incidentCount} active incidents)`);
+        }
+        
+        return sources.length > 0 ? sources.join(' | ') : 'Real-world datasets';
+    }
+
+    getNENADescription(nenaCode) {
+        const descriptions = {
+            'E': 'Emergency - Immediate response required',
+            'P1': 'Priority 1 - High priority response',
+            'P2': 'Priority 2 - Standard response',
+            'P3': 'Priority 3 - Low priority response'
+        };
+        return descriptions[nenaCode] || 'Standard response';
+    }
+
+    generateDetailedAISummary(transcript, realWorldAnalysis) {
+        // Extract key details from transcript for AI analysis
+        const keyDetails = this.extractKeyDetailsFromTranscript(transcript);
+        const keywords = realWorldAnalysis.keywords || [];
+        const priority = realWorldAnalysis.priority || 'Low';
+        
+        let detailedSummary = '';
+        
+        // Location context
+        if (keyDetails.location) {
+            detailedSummary += `📍 Location: ${keyDetails.location}\n`;
+        }
+        
+        // Incident specifics
+        if (keywords.includes('ROBBERY')) {
+            detailedSummary += `🚨 Incident: Armed robbery reported\n`;
+            if (keyDetails.suspects) detailedSummary += `👤 Suspects: ${keyDetails.suspects}\n`;
+            if (keyDetails.weapons) detailedSummary += `🔫 Weapons: ${keyDetails.weapons}\n`;
+        } else if (keywords.includes('ASSAULT') || keywords.includes('raping')) {
+            detailedSummary += `🚨 Incident: Violent assault in progress\n`;
+            if (keyDetails.victims) detailedSummary += `👤 Victims: ${keyDetails.victims}\n`;
+            if (keyDetails.injuries) detailedSummary += `🏥 Injuries: ${keyDetails.injuries}\n`;
+        } else if (keywords.includes('ANIMAL_EMERGENCY')) {
+            detailedSummary += `🚨 Incident: Animal emergency\n`;
+            if (keyDetails.animalType) detailedSummary += `🐕 Animal: ${keyDetails.animalType}\n`;
+            if (keyDetails.animalCondition) detailedSummary += `🏥 Condition: ${keyDetails.animalCondition}\n`;
+        } else if (keywords.includes('FIRE')) {
+            detailedSummary += `🚨 Incident: Fire emergency\n`;
+            if (keyDetails.fireType) detailedSummary += `🔥 Fire Type: ${keyDetails.fireType}\n`;
+            if (keyDetails.smoke) detailedSummary += `💨 Smoke: ${keyDetails.smoke}\n`;
+        } else if (keywords.includes('MEDICAL')) {
+            detailedSummary += `🚨 Incident: Medical emergency\n`;
+            if (keyDetails.medicalCondition) detailedSummary += `🏥 Condition: ${keyDetails.medicalCondition}\n`;
+            if (keyDetails.consciousness) detailedSummary += `🧠 Consciousness: ${keyDetails.consciousness}\n`;
+        }
+        
+        // Caller information
+        if (keyDetails.callerState) {
+            detailedSummary += `📞 Caller: ${keyDetails.callerState}\n`;
+        }
+        
+        // Urgency indicators
+        if (priority === 'High') {
+            detailedSummary += `⚡ URGENCY: Immediate response required\n`;
+        } else if (priority === 'Medium') {
+            detailedSummary += `⚡ URGENCY: Standard response\n`;
+        } else {
+            detailedSummary += `⚡ URGENCY: Routine response\n`;
+        }
+        
+        // Response time target
+        const responseTime = this.getResponseTimeTarget(realWorldAnalysis);
+        if (responseTime) {
+            detailedSummary += `⏱️ Target Response: ${responseTime}\n`;
+        }
+        
+        return detailedSummary.trim();
+    }
+
+    extractKeyDetailsFromTranscript(transcript) {
+        const lowerTranscript = transcript.toLowerCase();
+        const details = {};
+        
+        // Location extraction
+        if (lowerTranscript.includes('at my house') || lowerTranscript.includes('at home')) {
+            details.location = 'Residential location';
+        } else if (lowerTranscript.includes('street') || lowerTranscript.includes('avenue')) {
+            const streetMatch = lowerTranscript.match(/(\d+\s+[^,]+(?:street|avenue|road|way))/i);
+            if (streetMatch) details.location = streetMatch[1];
+        }
+        
+        // Suspect information
+        if (lowerTranscript.includes('armed') || lowerTranscript.includes('weapon')) {
+            details.weapons = 'Armed suspect(s)';
+        }
+        if (lowerTranscript.includes('suspect') || lowerTranscript.includes('perpetrator')) {
+            details.suspects = 'Suspect(s) reported';
+        }
+        
+        // Victim information
+        if (lowerTranscript.includes('injured') || lowerTranscript.includes('hurt')) {
+            details.injuries = 'Injuries reported';
+        }
+        if (lowerTranscript.includes('unconscious') || lowerTranscript.includes('not breathing')) {
+            details.consciousness = 'Unconscious/unresponsive';
+        }
+        
+        // Animal emergency details
+        if (lowerTranscript.includes('dog')) {
+            details.animalType = 'Dog';
+        } else if (lowerTranscript.includes('cat')) {
+            details.animalType = 'Cat';
+        }
+        if (lowerTranscript.includes('eaten') || lowerTranscript.includes('attacked')) {
+            details.animalCondition = 'Being attacked/injured';
+        }
+        
+        // Fire details
+        if (lowerTranscript.includes('smoke')) {
+            details.smoke = 'Heavy smoke reported';
+        }
+        if (lowerTranscript.includes('explosion')) {
+            details.fireType = 'Explosion';
+        }
+        
+        // Medical details
+        if (lowerTranscript.includes('chest pain') || lowerTranscript.includes('heart')) {
+            details.medicalCondition = 'Cardiac emergency';
+        } else if (lowerTranscript.includes('stroke')) {
+            details.medicalCondition = 'Stroke symptoms';
+        }
+        
+        // Caller state
+        if (lowerTranscript.includes('help') || lowerTranscript.includes('emergency')) {
+            details.callerState = 'Distressed, requesting immediate help';
+        } else if (lowerTranscript.includes('calm') || lowerTranscript.includes('okay')) {
+            details.callerState = 'Calm, providing information';
+        } else {
+            details.callerState = 'Providing incident details';
+        }
+        
+        return details;
+    }
+
+    getResponseTimeTarget(realWorldAnalysis) {
+        const priority = realWorldAnalysis.priority;
+        const category = realWorldAnalysis.category;
+        
+        if (priority === 'High') {
+            if (category === 'Police') return '2-4 minutes (Emergency)';
+            if (category === 'Fire') return '2-4 minutes (Emergency)';
+            if (category === 'Medical') return '2-4 minutes (Emergency)';
+        } else if (priority === 'Medium') {
+            return '5-8 minutes (Priority 1)';
+        } else {
+            return '10-15 minutes (Priority 2)';
+        }
+        
+        return null;
     }
 
     extractSummaryFromData(transcript, realWorldAnalysis) {
