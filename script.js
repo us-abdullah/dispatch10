@@ -900,9 +900,10 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
 
     createNewCall() {
         this.currentCallId = Date.now();
+        const callerId = this.generateCallerId();
         const callData = {
             callId: this.currentCallId,
-            callerId: this.generateCallerId(),
+            callerId: callerId,
             urgentBrief: 'Call in progress...',
             priority: 'Low',
             category: 'Police',
@@ -918,6 +919,8 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
         
         // Notify routing page if open
         this.notifyRoutingPage('newCall', callData);
+        
+        console.log('Created new call:', callData);
     }
 
     completeCurrentCall() {
@@ -930,7 +933,7 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
             urgentBrief: this.currentIncident?.urgentBrief || 'Call completed',
             priority: this.currentIncident?.classification?.priority || 'Low',
             category: this.currentIncident?.classification?.category || 'Police',
-            startTime: new Date(Date.now() - (dispatchTime * 1000)),
+            startTime: this.dispatchStartTime || new Date(Date.now() - (dispatchTime * 1000)),
             endTime: new Date(),
             status: 'Completed',
             transcript: this.transcript.map(entry => entry.text).join(' '),
@@ -950,6 +953,7 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
         this.notifyRoutingPage('callCompleted', callData);
         
         this.currentCallId = null;
+        this.dispatchStartTime = null;
     }
 
     generateCallerId() {

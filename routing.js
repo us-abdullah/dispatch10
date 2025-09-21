@@ -8,6 +8,14 @@ class CallQueueManager {
         this.initializeElements();
         this.setupEventListeners();
         this.loadFromStorage();
+        this.forceRefresh();
+    }
+
+    forceRefresh() {
+        // Force refresh every 2 seconds to catch any missed updates
+        setInterval(() => {
+            this.loadFromStorage();
+        }, 2000);
     }
 
     initializeElements() {
@@ -50,6 +58,8 @@ class CallQueueManager {
     }
 
     addActiveCall(callData) {
+        console.log('Adding active call:', callData);
+        
         const call = {
             id: callData.callId || this.callIdCounter++,
             callerId: callData.callerId || this.generateCallerId(),
@@ -67,9 +77,11 @@ class CallQueueManager {
         const existingIndex = this.activeCalls.findIndex(c => c.id === call.id);
         if (existingIndex !== -1) {
             this.activeCalls[existingIndex] = call;
+            console.log('Updated existing call');
         } else {
             this.activeCalls.push(call);
             this.startTimer(call.id);
+            console.log('Added new call to queue');
         }
         
         this.renderActiveCalls();
@@ -167,6 +179,9 @@ class CallQueueManager {
         const call = this.activeCalls.find(c => c.id === callId) || 
                    this.completedCalls.find(c => c.id === callId);
         if (call) {
+            if (call.dispatchTime) {
+                return call.dispatchTime;
+            }
             const endTime = call.endTime || new Date();
             return Math.floor((endTime - call.startTime) / 1000);
         }
@@ -359,6 +374,9 @@ class CallQueueManager {
             const activeCalls = localStorage.getItem('dispatchAI_activeCalls');
             const completedCalls = localStorage.getItem('dispatchAI_completedCalls');
             
+            console.log('Loading from storage - Active calls:', activeCalls);
+            console.log('Loading from storage - Completed calls:', completedCalls);
+            
             if (activeCalls) {
                 this.activeCalls = JSON.parse(activeCalls).map(call => {
                     call.startTime = new Date(call.startTime);
@@ -381,6 +399,9 @@ class CallQueueManager {
                     return call;
                 });
             }
+            
+            console.log('Active calls after load:', this.activeCalls);
+            console.log('Completed calls after load:', this.completedCalls);
             
             this.renderActiveCalls();
             this.renderCallHistory();
