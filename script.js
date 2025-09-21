@@ -12,6 +12,9 @@ class DispatchAI {
         this.dispatchStartTime = null;
         this.dispatchTimerInterval = null;
         this.currentCallId = null;
+        this.isPaused = false;
+        this.pausedTime = 0;
+        this.pauseStartTime = null;
         
         this.initializeElements();
         this.setupEventListeners();
@@ -23,6 +26,7 @@ class DispatchAI {
     initializeElements() {
         // Buttons
         this.startCallBtn = document.getElementById('startCallBtn');
+        this.pauseCallBtn = document.getElementById('pauseCallBtn');
         this.stopCallBtn = document.getElementById('stopCallBtn');
         this.clearTranscriptBtn = document.getElementById('clearTranscriptBtn');
         this.exportTranscriptBtn = document.getElementById('exportTranscriptBtn');
@@ -85,6 +89,7 @@ class DispatchAI {
     setupEventListeners() {
         // Call controls
         this.startCallBtn.addEventListener('click', () => this.startCall());
+        this.pauseCallBtn.addEventListener('click', () => this.togglePause());
         this.stopCallBtn.addEventListener('click', () => this.stopCall());
         this.clearTranscriptBtn.addEventListener('click', () => this.clearTranscript());
         this.exportTranscriptBtn.addEventListener('click', () => this.exportTranscript());
@@ -129,6 +134,7 @@ class DispatchAI {
             this.isRecording = true;
             this.updateStatus('Recording', 'recording');
             this.startCallBtn.disabled = true;
+            this.pauseCallBtn.disabled = false;
             this.stopCallBtn.disabled = false;
         };
 
@@ -190,13 +196,53 @@ class DispatchAI {
         }
     }
 
+    togglePause() {
+        if (this.isPaused) {
+            this.resumeCall();
+        } else {
+            this.pauseCall();
+        }
+    }
+
+    pauseCall() {
+        if (!this.isRecording || this.isPaused) return;
+
+        this.isPaused = true;
+        this.recognition.stop();
+        this.pauseDispatchTimer();
+        
+        this.pauseCallBtn.textContent = '▶️ Resume';
+        this.pauseCallBtn.classList.add('resume');
+        this.updateStatus('Paused', 'paused');
+        
+        this.showNotification('Call paused - timer and recording stopped', 2000);
+    }
+
+    resumeCall() {
+        if (!this.isPaused) return;
+
+        this.isPaused = false;
+        this.recognition.start();
+        this.resumeDispatchTimer();
+        
+        this.pauseCallBtn.textContent = '⏸️ Pause';
+        this.pauseCallBtn.classList.remove('resume');
+        this.updateStatus('Recording', 'recording');
+        
+        this.showNotification('Call resumed - timer and recording restarted', 2000);
+    }
+
     stopCall() {
         this.isRecording = false;
+        this.isPaused = false;
         this.recognition.stop();
         this.stopDispatchTimer();
         this.completeCurrentCall();
         this.updateStatus('Ready', 'ready');
         this.startCallBtn.disabled = false;
+        this.pauseCallBtn.disabled = true;
+        this.pauseCallBtn.textContent = '⏸️ Pause';
+        this.pauseCallBtn.classList.remove('resume');
         this.stopCallBtn.disabled = true;
         this.exportIncidentBtn.disabled = false;
         this.showNotification('Call ended - incident data ready for export', 2000);
@@ -723,6 +769,9 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
             this.clearTranscript();
             this.stopCall();
             this.clearCallQueueData();
+            this.isPaused = false;
+            this.pausedTime = 0;
+            this.pauseStartTime = null;
             this.showNotification('All data cleared including call queue', 2000);
         }
     }
@@ -861,11 +910,39 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
 
     startDispatchTimer() {
         this.dispatchStartTime = new Date();
+        this.pausedTime = 0;
         this.dispatchTimer.style.display = 'flex';
         
         this.dispatchTimerInterval = setInterval(() => {
             if (this.dispatchStartTime) {
-                const elapsed = Math.floor((new Date() - this.dispatchStartTime) / 1000);
+                const elapsed = Math.floor((new Date() - this.dispatchStartTime - this.pausedTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                this.timerValue.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }, 1000);
+    }
+
+    pauseDispatchTimer() {
+        if (this.dispatchTimerInterval) {
+            clearInterval(this.dispatchTimerInterval);
+            this.dispatchTimerInterval = null;
+        }
+        // Record the time when paused
+        this.pauseStartTime = new Date();
+    }
+
+    resumeDispatchTimer() {
+        if (this.pauseStartTime) {
+            // Add the paused duration to the total paused time
+            this.pausedTime += new Date() - this.pauseStartTime;
+            this.pauseStartTime = null;
+        }
+        
+        // Restart the timer
+        this.dispatchTimerInterval = setInterval(() => {
+            if (this.dispatchStartTime) {
+                const elapsed = Math.floor((new Date() - this.dispatchStartTime - this.pausedTime) / 1000);
                 const minutes = Math.floor(elapsed / 60);
                 const seconds = elapsed % 60;
                 this.timerValue.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -880,11 +957,14 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
         }
         this.dispatchTimer.style.display = 'none';
         this.dispatchStartTime = null;
+        this.pausedTime = 0;
+        this.pauseStartTime = null;
     }
 
     getDispatchTime() {
         if (this.dispatchStartTime) {
-            return Math.floor((new Date() - this.dispatchStartTime) / 1000);
+            const currentPausedTime = this.pauseStartTime ? new Date() - this.pauseStartTime : 0;
+            return Math.floor((new Date() - this.dispatchStartTime - this.pausedTime - currentPausedTime) / 1000);
         }
         return 0;
     }

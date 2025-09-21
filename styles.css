@@ -142,6 +142,36 @@ body {
     transform: translateY(-1px);
 }
 
+.btn-pause {
+    background: #ff6b35;
+    color: white;
+    border: 1px solid #ff6b35;
+    font-weight: 600;
+}
+
+.btn-pause:hover:not(:disabled) {
+    background: #ff8c5a;
+    border-color: #ff8c5a;
+    transform: translateY(-1px);
+}
+
+.btn-pause:disabled {
+    background: #444;
+    border-color: #444;
+    color: #888;
+    cursor: not-allowed;
+}
+
+.btn-pause.resume {
+    background: #28a745;
+    border-color: #28a745;
+}
+
+.btn-pause.resume:hover:not(:disabled) {
+    background: #34ce57;
+    border-color: #34ce57;
+}
+
 .btn-export {
     background: linear-gradient(135deg, #ff6b6b, #ee5a52);
     color: #fff;
