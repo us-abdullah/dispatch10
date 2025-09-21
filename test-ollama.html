@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama Test - DispatchAI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        .test-section {
+            background: #2d2d3a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #00cc6a;
+        }
+        .result {
+            background: #0a0a0a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            background: #4a0a0a;
+            color: #ff6b6b;
+        }
+        .success {
+            background: #0a4a0a;
+            color: #00ff88;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ollama Integration Test</h1>
+    
+    <div class="test-section">
+        <h2>Connection Test</h2>
+        <button onclick="testConnection()">Test Ollama Connection</button>
+        <div id="connectionResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Incident Analysis Test</h2>
+        <button onclick="testIncidentAnalysis()">Test Incident Analysis</button>
+        <div id="analysisResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Available Models</h2>
+        <button onclick="listModels()">List Available Models</button>
+        <div id="modelsResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Transcripts</h2>
+        <button onclick="testArmedRobbery()">Test Armed Robbery</button>
+        <button onclick="testFire()">Test Fire Emergency</button>
+        <button onclick="testMedical()">Test Medical Emergency</button>
+        <div id="transcriptResult" class="result"></div>
+    </div>
+
+    <script src="ollama-integration.js"></script>
+    <script>
+        const ollama = new OllamaIntegration();
+        
+        async function testConnection() {
+            const resultDiv = document.getElementById('connectionResult');
+            resultDiv.textContent = 'Testing connection...';
+            
+            try {
+                const response = await fetch('http://localhost:11434/api/tags');
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = '✅ Ollama is running!\n\nAvailable models:\n' + 
+                        data.models.map(m => `- ${m.name} (${m.size} bytes)`).join('\n');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Ollama connection failed:\n' + error.message + 
+                    '\n\nMake sure Ollama is running:\n1. Install Ollama from https://ollama.ai\n2. Run: ollama serve\n3. Pull a model: ollama pull llama3.2';
+            }
+        }
+
+        async function testIncidentAnalysis() {
+            const resultDiv = document.getElementById('analysisResult');
+            resultDiv.textContent = 'Testing incident analysis...';
+            
+            const testTranscript = "This is 911, I'm calling about an armed robbery at 123 Main Street. Two men with guns just robbed the convenience store and are fleeing north in a black sedan.";
+            
+            try {
+                const analysis = await ollama.analyzeIncident(testTranscript);
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Analysis completed!\n\n' + JSON.stringify(analysis, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Analysis failed:\n' + error.message;
+            }
+        }
+
+        async function listModels() {
+            const resultDiv = document.getElementById('modelsResult');
+            resultDiv.textContent = 'Fetching models...';
+            
+            try {
+                const response = await fetch('http://localhost:11434/api/tags');
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = 'Available models:\n' + 
+                        data.models.map(m => `- ${m.name} (${(m.size / 1024 / 1024 / 1024).toFixed(2)} GB)`).join('\n');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Failed to fetch models:\n' + error.message;
+            }
+        }
+
+        async function testArmedRobbery() {
+            await testTranscript("This is 911, I'm calling about an armed robbery at 123 Main Street. Two men with guns just robbed the convenience store and are fleeing north in a black sedan. I'm safe inside my car but I can see them driving away.");
+        }
+
+        async function testFire() {
+            await testTranscript("911, there's a fire at my house! I can see smoke coming from the second floor. I've evacuated everyone but I think someone might still be inside. The address is 456 Oak Avenue. The fire seems to be spreading quickly.");
+        }
+
+        async function testMedical() {
+            await testTranscript("I need an ambulance! My husband is having chest pain and can't breathe. We're at 789 Pine Street, apartment 3B. He's conscious but very pale and sweating. He's 65 years old and has a history of heart problems.");
+        }
+
+        async function testTranscript(transcript) {
+            const resultDiv = document.getElementById('transcriptResult');
+            resultDiv.textContent = 'Analyzing transcript...';
+            
+            try {
+                const analysis = await ollama.analyzeIncident(transcript);
+                resultDiv.className = 'result success';
+                resultDiv.textContent = 'Transcript: "' + transcript + '"\n\n' +
+                    'Analysis Result:\n' + JSON.stringify(analysis, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Analysis failed:\n' + error.message;
+            }
+        }
+
+        // Auto-test connection on load
+        window.addEventListener('load', () => {
+            setTimeout(testConnection, 1000);
+        });
+    </script>
+</body>
+</html>

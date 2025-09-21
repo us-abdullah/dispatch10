@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DispatchAI Copilot</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1>DispatchAI Copilot</h1>
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Ready</span>
+                    <div class="ai-status" id="aiStatus">
+                        <span class="ai-indicator" id="aiIndicator">🤖</span>
+                        <span id="aiStatusText">Mock AI</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-primary" id="startCallBtn">Start Call</button>
+                <button class="btn btn-secondary" id="stopCallBtn" disabled>Stop Call</button>
+                <button class="btn btn-small" id="testOllamaBtn">Test AI</button>
+                <button class="btn btn-small" id="radioModalBtn">Radio Log</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Column: Transcript -->
+            <div class="left-panel">
+                <div class="panel-header">
+                    <h3>Live Call Transcript</h3>
+                    <div class="transcript-controls">
+                        <button class="btn-small" id="clearTranscriptBtn">Clear</button>
+                        <button class="btn-small" id="exportTranscriptBtn">Export</button>
+                    </div>
+                </div>
+                <div class="transcript-container" id="transcriptContainer">
+                    <div class="transcript-placeholder">
+                        <p>Press "Start Call" to begin transcription...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Column: AI Summary -->
+            <div class="center-panel">
+                <!-- Urgent Brief -->
+                <div class="urgent-brief">
+                    <div class="brief-header">
+                        <h3>Urgent Brief</h3>
+                        <div class="brief-controls">
+                            <div class="priority-badge" id="priorityBadge">LOW</div>
+                            <div class="ai-processing" id="aiProcessingIndicator" style="display: none;">
+                                <div class="loading"></div>
+                                <span>AI Processing...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="brief-content" id="urgentBriefContent">
+                        <p>No active incident detected</p>
+                    </div>
+                </div>
+
+                <!-- Bullet Summary -->
+                <div class="bullet-summary">
+                    <h3>Incident Summary</h3>
+                    <div class="summary-grid" id="summaryGrid">
+                        <div class="summary-item">
+                            <span class="summary-label">Who:</span>
+                            <span class="summary-value" id="summaryWho">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">What:</span>
+                            <span class="summary-value" id="summaryWhat">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Where:</span>
+                            <span class="summary-value" id="summaryWhere">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">When:</span>
+                            <span class="summary-value" id="summaryWhen">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Injuries:</span>
+                            <span class="summary-value" id="summaryInjuries">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Suspects:</span>
+                            <span class="summary-value" id="summarySuspects">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Controls -->
+            <div class="right-panel">
+                <!-- Suggested Questions -->
+                <div class="suggested-questions">
+                    <h3>Suggested Questions</h3>
+                    <div class="questions-list" id="questionsList">
+                        <p class="no-questions">Start a call to get AI-suggested questions</p>
+                    </div>
+                </div>
+
+                <!-- Incident Classification -->
+                <div class="incident-classification">
+                    <h3>Incident Classification</h3>
+                    <div class="classification-content">
+                        <div class="category-section">
+                            <label>Category:</label>
+                            <div class="category-badges">
+                                <span class="category-badge" id="policeBadge">Police</span>
+                                <span class="category-badge" id="fireBadge">Fire</span>
+                                <span class="category-badge" id="medicalBadge">Medical</span>
+                            </div>
+                        </div>
+                        <div class="priority-section">
+                            <label>Priority:</label>
+                            <div class="priority-indicator">
+                                <span class="priority-level" id="priorityLevel">Low</span>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" id="confidenceFill"></div>
+                                </div>
+                                <span class="confidence-text" id="confidenceText">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Routing Suggestions -->
+                <div class="routing-suggestions">
+                    <h3>Suggested Units</h3>
+                    <div class="routing-content" id="routingContent">
+                        <p>No routing suggestions available</p>
+                    </div>
+                </div>
+
+                <!-- Export Controls -->
+                <div class="export-controls">
+                    <button class="btn btn-export" id="exportIncidentBtn" disabled>
+                        Export Incident Pack
+                    </button>
+                    <div class="export-options">
+                        <label>
+                            <input type="radio" name="exportFormat" value="json" checked>
+                            JSON
+                        </label>
+                        <label>
+                            <input type="radio" name="exportFormat" value="pdf">
+                            PDF
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer: Privacy Controls -->
+        <footer class="footer">
+            <div class="privacy-controls">
+                <div class="privacy-item">
+                    <label>
+                        <input type="checkbox" id="humanConfirmationToggle" checked>
+                        Human Confirmation Required
+                    </label>
+                </div>
+                <div class="privacy-item">
+                    <label>
+                        Auto Delete Data After:
+                        <select id="dataRetentionSelect">
+                            <option value="15">15 minutes</option>
+                            <option value="60" selected>1 hour</option>
+                            <option value="1440">24 hours</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="privacy-item">
+                    <button class="btn-small" id="clearAllDataBtn">Clear All Data</button>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Radio Log Modal (Optional) -->
+        <div class="modal" id="radioModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Radio Chatter Log</h3>
+                    <button class="modal-close" id="closeRadioModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="radio-input">
+                        <textarea placeholder="Paste radio chatter or upload audio file..." id="radioInput"></textarea>
+                        <button class="btn-small" id="processRadioBtn">Process</button>
+                    </div>
+                    <div class="radio-log" id="radioLog">
+                        <p>No radio chatter processed yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="notification-toast" id="notificationToast">
+        <div class="notification-content">
+            <span class="notification-text" id="notificationText"></span>
+            <button class="notification-close" id="notificationClose">&times;</button>
+        </div>
+    </div>
+
+    <script src="ollama-integration.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
