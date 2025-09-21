@@ -366,10 +366,10 @@ class DispatchAI {
                 const analysis = await this.analyzeWithAI(fullTranscript);
                 
                 if (analysis) {
-                    // Update UI with analysis
+                    // Update UI with analysis (but not suggested script - that's handled per entry)
                     this.updateUrgentBrief(analysis.urgentBrief);
                     this.updateSummary(analysis.summary);
-                    this.updateSuggestedScript(analysis.suggestedScript);
+                    // this.updateSuggestedScript(analysis.suggestedScript); // Disabled - handled per entry
                     this.updateClassification(analysis.classification);
                     this.updateRouting(analysis.routing);
                     
@@ -398,11 +398,13 @@ class DispatchAI {
         
         // Skip if we've already processed this exact transcript
         if (this.processedTranscripts.has(transcriptKey)) {
+            console.log('Skipping duplicate transcript:', transcriptKey);
             return;
         }
         
         // Mark this transcript as processed
         this.processedTranscripts.add(transcriptKey);
+        console.log('Processing new transcript:', transcriptKey);
         
         try {
             // Generate a quick script response for this specific transcript entry
@@ -654,15 +656,33 @@ class DispatchAI {
             const timestamp = scriptTimestamp[1];
             // Check if this exact timestamp already exists
             if (currentScript.includes(`[${timestamp}]`)) {
+                console.log('Skipping duplicate script with timestamp:', timestamp);
                 return;
             }
         }
+
+        // Also check if the script content (without timestamp) already exists
+        const scriptContent = script.replace(/\[\d{1,2}:\d{2}:\d{2} [AP]M\]/g, '').trim();
+        if (currentScript.includes(scriptContent)) {
+            console.log('Skipping duplicate script content');
+            return;
+        }
+
+        console.log('Adding new script:', script.substring(0, 50) + '...');
 
         // Prepend new script content (most recent at top)
         const scriptEntry = `${script}\n\n`;
         
         // Add to beginning of content (most recent first)
-        this.suggestedScript.value = scriptEntry + currentScript;
+        let newContent = scriptEntry + currentScript;
+        
+        // Limit to last 5 entries to prevent overflow
+        const entries = newContent.split(/\n\n(?=\[\d{1,2}:\d{2}:\d{2} [AP]M\])/);
+        if (entries.length > 5) {
+            newContent = entries.slice(0, 5).join('\n\n');
+        }
+        
+        this.suggestedScript.value = newContent;
         
         // Auto-scroll to top to show most recent
         this.suggestedScript.scrollTop = 0;
