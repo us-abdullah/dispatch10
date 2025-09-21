@@ -542,62 +542,222 @@ Consider the severity and type of incident.`;
     }
 
     generateDetailedAISummary(transcript, realWorldAnalysis) {
-        // Extract key details from transcript for AI analysis
-        const keyDetails = this.extractKeyDetailsFromTranscript(transcript);
+        // Generate a specific, detailed summary based on the actual transcript content
         const keywords = realWorldAnalysis.keywords || [];
         const priority = realWorldAnalysis.priority || 'Low';
         
         let detailedSummary = '';
         
-        // Location context
-        if (keyDetails.location) {
-            detailedSummary += `📍 Location: ${keyDetails.location}\n`;
-        }
-        
-        // Incident specifics
+        // Generate specific incident description based on transcript content
         if (keywords.includes('ROBBERY')) {
-            detailedSummary += `🚨 Incident: Armed robbery reported\n`;
-            if (keyDetails.suspects) detailedSummary += `👤 Suspects: ${keyDetails.suspects}\n`;
-            if (keyDetails.weapons) detailedSummary += `🔫 Weapons: ${keyDetails.weapons}\n`;
+            detailedSummary += this.generateRobberySummary(transcript);
         } else if (keywords.includes('ASSAULT') || keywords.includes('raping')) {
-            detailedSummary += `🚨 Incident: Violent assault in progress\n`;
-            if (keyDetails.victims) detailedSummary += `👤 Victims: ${keyDetails.victims}\n`;
-            if (keyDetails.injuries) detailedSummary += `🏥 Injuries: ${keyDetails.injuries}\n`;
+            detailedSummary += this.generateAssaultSummary(transcript);
         } else if (keywords.includes('ANIMAL_EMERGENCY')) {
-            detailedSummary += `🚨 Incident: Animal emergency\n`;
-            if (keyDetails.animalType) detailedSummary += `🐕 Animal: ${keyDetails.animalType}\n`;
-            if (keyDetails.animalCondition) detailedSummary += `🏥 Condition: ${keyDetails.animalCondition}\n`;
+            detailedSummary += this.generateAnimalEmergencySummary(transcript);
         } else if (keywords.includes('FIRE')) {
-            detailedSummary += `🚨 Incident: Fire emergency\n`;
-            if (keyDetails.fireType) detailedSummary += `🔥 Fire Type: ${keyDetails.fireType}\n`;
-            if (keyDetails.smoke) detailedSummary += `💨 Smoke: ${keyDetails.smoke}\n`;
+            detailedSummary += this.generateFireSummary(transcript);
         } else if (keywords.includes('MEDICAL')) {
-            detailedSummary += `🚨 Incident: Medical emergency\n`;
-            if (keyDetails.medicalCondition) detailedSummary += `🏥 Condition: ${keyDetails.medicalCondition}\n`;
-            if (keyDetails.consciousness) detailedSummary += `🧠 Consciousness: ${keyDetails.consciousness}\n`;
-        }
-        
-        // Caller information
-        if (keyDetails.callerState) {
-            detailedSummary += `📞 Caller: ${keyDetails.callerState}\n`;
-        }
-        
-        // Urgency indicators
-        if (priority === 'High') {
-            detailedSummary += `⚡ URGENCY: Immediate response required\n`;
-        } else if (priority === 'Medium') {
-            detailedSummary += `⚡ URGENCY: Standard response\n`;
+            detailedSummary += this.generateMedicalSummary(transcript);
+        } else if (keywords.includes('SHOOTING') || transcript.includes('shooting') || transcript.includes('gun')) {
+            detailedSummary += this.generateShootingSummary(transcript);
+        } else if (keywords.includes('EMERGENCY') || transcript.includes('help') || transcript.includes('emergency')) {
+            detailedSummary += this.generateGenericEmergencySummary(transcript);
         } else {
-            detailedSummary += `⚡ URGENCY: Routine response\n`;
+            detailedSummary += this.generateGenericIncidentSummary(transcript);
         }
         
-        // Response time target
+        // Add urgency and response information
+        if (priority === 'High') {
+            detailedSummary += `\n⚡ URGENCY: Immediate response required`;
+        } else if (priority === 'Medium') {
+            detailedSummary += `\n⚡ URGENCY: Standard response`;
+        } else {
+            detailedSummary += `\n⚡ URGENCY: Routine response`;
+        }
+        
         const responseTime = this.getResponseTimeTarget(realWorldAnalysis);
         if (responseTime) {
-            detailedSummary += `⏱️ Target Response: ${responseTime}\n`;
+            detailedSummary += `\n⏱️ Target Response: ${responseTime}`;
         }
         
         return detailedSummary.trim();
+    }
+
+    generateRobberySummary(transcript) {
+        const lowerTranscript = transcript.toLowerCase();
+        let summary = `🚨 ARMED ROBBERY IN PROGRESS\n`;
+        
+        if (lowerTranscript.includes('at my house') || lowerTranscript.includes('at home')) {
+            summary += `📍 Location: Residential property\n`;
+        }
+        
+        if (lowerTranscript.includes('armed') || lowerTranscript.includes('weapon') || lowerTranscript.includes('gun')) {
+            summary += `🔫 Suspects: Armed and dangerous\n`;
+        } else {
+            summary += `👤 Suspects: Unknown number, status unclear\n`;
+        }
+        
+        if (lowerTranscript.includes('money') || lowerTranscript.includes('cash') || lowerTranscript.includes('dollar')) {
+            summary += `💰 Motive: Financial gain/theft\n`;
+        }
+        
+        if (lowerTranscript.includes('help') || lowerTranscript.includes('emergency')) {
+            summary += `📞 Caller: Distressed, requesting immediate assistance\n`;
+        } else {
+            summary += `📞 Caller: Reporting active robbery\n`;
+        }
+        
+        return summary;
+    }
+
+    generateAssaultSummary(transcript) {
+        const lowerTranscript = transcript.toLowerCase();
+        let summary = `🚨 VIOLENT ASSAULT IN PROGRESS\n`;
+        
+        if (lowerTranscript.includes('raping') || lowerTranscript.includes('rape')) {
+            summary += `⚠️ Type: Sexual assault/rape\n`;
+        } else {
+            summary += `⚠️ Type: Physical assault\n`;
+        }
+        
+        if (lowerTranscript.includes('at my house') || lowerTranscript.includes('at home')) {
+            summary += `📍 Location: Residential property\n`;
+        }
+        
+        if (lowerTranscript.includes('injured') || lowerTranscript.includes('hurt') || lowerTranscript.includes('bleeding')) {
+            summary += `🏥 Victim Status: Injured, medical attention needed\n`;
+        } else {
+            summary += `👤 Victim Status: Unknown injury status\n`;
+        }
+        
+        if (lowerTranscript.includes('help') || lowerTranscript.includes('emergency')) {
+            summary += `📞 Caller: Distressed, immediate help needed\n`;
+        } else {
+            summary += `📞 Caller: Reporting active assault\n`;
+        }
+        
+        return summary;
+    }
+
+    generateShootingSummary(transcript) {
+        const lowerTranscript = transcript.toLowerCase();
+        let summary = `🚨 ACTIVE SHOOTING INCIDENT\n`;
+        
+        if (lowerTranscript.includes('car') || lowerTranscript.includes('vehicle')) {
+            summary += `🚗 Context: Vehicle-related shooting\n`;
+        }
+        
+        if (lowerTranscript.includes('chasing') || lowerTranscript.includes('following')) {
+            summary += `🏃 Situation: Suspect pursuing victim\n`;
+        }
+        
+        if (lowerTranscript.includes('tires') || lowerTranscript.includes('tire')) {
+            summary += `🎯 Target: Vehicle tires being shot at\n`;
+        }
+        
+        if (lowerTranscript.includes('gun') || lowerTranscript.includes('shooting')) {
+            summary += `🔫 Weapon: Firearm confirmed\n`;
+        }
+        
+        summary += `📞 Caller: In immediate danger, fleeing suspect\n`;
+        
+        return summary;
+    }
+
+    generateAnimalEmergencySummary(transcript) {
+        const lowerTranscript = transcript.toLowerCase();
+        let summary = `🚨 ANIMAL EMERGENCY\n`;
+        
+        if (lowerTranscript.includes('dog')) {
+            summary += `🐕 Animal: Dog in distress\n`;
+        } else if (lowerTranscript.includes('cat')) {
+            summary += `🐱 Animal: Cat in distress\n`;
+        } else {
+            summary += `🐾 Animal: Pet in distress\n`;
+        }
+        
+        if (lowerTranscript.includes('eaten') || lowerTranscript.includes('attacked')) {
+            summary += `⚠️ Situation: Animal being attacked/injured\n`;
+        }
+        
+        if (lowerTranscript.includes('help') || lowerTranscript.includes('emergency')) {
+            summary += `📞 Caller: Distressed about pet's safety\n`;
+        } else {
+            summary += `📞 Caller: Reporting animal emergency\n`;
+        }
+        
+        return summary;
+    }
+
+    generateFireSummary(transcript) {
+        const lowerTranscript = transcript.toLowerCase();
+        let summary = `🚨 FIRE EMERGENCY\n`;
+        
+        if (lowerTranscript.includes('house') || lowerTranscript.includes('home')) {
+            summary += `🏠 Location: Residential fire\n`;
+        }
+        
+        if (lowerTranscript.includes('smoke')) {
+            summary += `💨 Smoke: Heavy smoke reported\n`;
+        }
+        
+        if (lowerTranscript.includes('explosion')) {
+            summary += `💥 Type: Explosion/fire\n`;
+        }
+        
+        summary += `📞 Caller: Reporting active fire emergency\n`;
+        
+        return summary;
+    }
+
+    generateMedicalSummary(transcript) {
+        const lowerTranscript = transcript.toLowerCase();
+        let summary = `🚨 MEDICAL EMERGENCY\n`;
+        
+        if (lowerTranscript.includes('chest pain') || lowerTranscript.includes('heart')) {
+            summary += `❤️ Condition: Cardiac emergency\n`;
+        } else if (lowerTranscript.includes('stroke')) {
+            summary += `🧠 Condition: Stroke symptoms\n`;
+        } else if (lowerTranscript.includes('unconscious')) {
+            summary += `😵 Condition: Unconscious patient\n`;
+        } else {
+            summary += `🏥 Condition: Medical emergency\n`;
+        }
+        
+        summary += `📞 Caller: Requesting immediate medical assistance\n`;
+        
+        return summary;
+    }
+
+    generateGenericEmergencySummary(transcript) {
+        const lowerTranscript = transcript.toLowerCase();
+        let summary = `🚨 EMERGENCY IN PROGRESS\n`;
+        
+        if (lowerTranscript.includes('help')) {
+            summary += `🆘 Situation: Caller requesting immediate help\n`;
+        }
+        
+        if (lowerTranscript.includes('emergency')) {
+            summary += `⚠️ Type: Emergency situation reported\n`;
+        }
+        
+        summary += `📞 Caller: Distressed, immediate assistance needed\n`;
+        
+        return summary;
+    }
+
+    generateGenericIncidentSummary(transcript) {
+        const lowerTranscript = transcript.toLowerCase();
+        let summary = `📞 INCIDENT REPORTED\n`;
+        
+        if (lowerTranscript.includes('at my house') || lowerTranscript.includes('at home')) {
+            summary += `📍 Location: Residential property\n`;
+        }
+        
+        summary += `📞 Caller: Providing incident details\n`;
+        
+        return summary;
     }
 
     extractKeyDetailsFromTranscript(transcript) {

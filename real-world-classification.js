@@ -162,7 +162,7 @@ class RealWorldClassification {
         if (transcript.includes('robbery') || transcript.includes('robbed') || transcript.includes('got robbed')) keywords.push('ROBBERY');
         if (transcript.includes('assault') || transcript.includes('attacked')) keywords.push('ASSAULT');
         if (transcript.includes('raping') || transcript.includes('rape') || transcript.includes('sexual assault')) keywords.push('ASSAULT');
-        if (transcript.includes('shooting') || transcript.includes('shot')) keywords.push('SHOOTING');
+        if (transcript.includes('shooting') || transcript.includes('shot') || transcript.includes('gun') || transcript.includes('chasing') || transcript.includes('tires')) keywords.push('SHOOTING');
         if (transcript.includes('stabbing') || transcript.includes('stabbed')) keywords.push('STABBING');
         if (transcript.includes('domestic') || transcript.includes('family')) keywords.push('DOMESTIC');
         if (transcript.includes('suicide') || transcript.includes('kill myself')) keywords.push('SUICIDE');
