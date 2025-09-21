@@ -4,18 +4,16 @@ class OllamaIntegration {
         this.baseUrl = 'http://localhost:11434/api';
         this.model = 'llama3.2'; // Default model, can be changed
         this.isAvailable = false;
+        this.realWorldClassification = new RealWorldClassification();
+        this.dataAnalysis = new DataAnalysis();
         this.checkAvailability();
     }
 
     async checkAvailability() {
         try {
-            // Check if we're running from file:// protocol
-            if (window.location.protocol === 'file:') {
-                console.log('Running from file:// protocol - Ollama not accessible, using mock AI');
-                this.isAvailable = false;
-                return;
-            }
-
+            // Always try to connect to Ollama, regardless of protocol
+            console.log('Checking Ollama availability...');
+            
             const response = await fetch(`${this.baseUrl}/tags`, {
                 method: 'GET',
                 mode: 'cors',
@@ -26,12 +24,12 @@ class OllamaIntegration {
             
             if (response.ok) {
                 this.isAvailable = true;
-                console.log('Ollama is available');
+                console.log('Ollama is available and connected');
             } else {
                 throw new Error(`HTTP ${response.status}`);
             }
         } catch (error) {
-            console.log('Ollama not available, using mock AI:', error.message);
+            console.log('Ollama not available, using real-world data-driven analysis:', error.message);
             this.isAvailable = false;
         }
     }
@@ -79,61 +77,78 @@ class OllamaIntegration {
     async analyzeIncident(transcript) {
         console.log('Analyzing incident with transcript:', transcript.substring(0, 100) + '...');
         
-        // If Ollama is not available, use mock analysis
+        // First, get real-world classification based on actual 911 data
+        const realWorldAnalysis = this.realWorldClassification.classifyIncident(transcript);
+        const dataAnalysis = this.dataAnalysis.getClassificationForTranscript(transcript);
+        
+        console.log('Real-world classification:', realWorldAnalysis);
+        console.log('Data analysis result:', dataAnalysis);
+        
+        // If Ollama is not available, use real-world data-driven analysis
         if (!this.isAvailable) {
-            console.log('Using mock AI analysis');
-            return this.mockAIAnalysis(transcript);
+            console.log('Using real-world data-driven analysis');
+            return this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
         }
 
-        const prompt = `You are an AI assistant for 911 dispatch. Analyze this emergency call transcript and provide a structured response in JSON format.
+        const prompt = `You are an AI assistant for 911 dispatch trained on real NYC, Seattle, and NENA datasets. Analyze this emergency call transcript and provide a structured response in JSON format.
+
+REAL-WORLD DATA CONTEXT:
+- NYC 911 Data: ${JSON.stringify(realWorldAnalysis)}
+- Data Analysis: ${JSON.stringify(dataAnalysis)}
+- NENA Standards: Based on National Emergency Number Association codes
 
 Transcript: "${transcript}"
 
 Please analyze and return a JSON object with the following structure:
 {
-  "urgentBrief": "One-line urgent summary with priority level [HIGH/MEDIUM/LOW]",
+  "urgentBrief": "One-line urgent summary with priority level [HIGH/MEDIUM/LOW] based on real data patterns",
   "summary": {
     "who": "Who is involved (caller, witness, etc.)",
-    "what": "What happened (type of incident)",
+    "what": "What happened (type of incident) - use real call type classifications",
     "where": "Location if mentioned",
     "when": "Time reference if mentioned",
     "injuries": "Injury status",
     "suspects": "Suspect information if any"
   },
   "questions": [
-    "Suggested follow-up question 1",
-    "Suggested follow-up question 2",
-    "Suggested follow-up question 3"
+    "Suggested follow-up question 1 based on real dispatch protocols",
+    "Suggested follow-up question 2 based on real dispatch protocols",
+    "Suggested follow-up question 3 based on real dispatch protocols"
   ],
   "classification": {
-    "category": "Police/Fire/Medical",
-    "priority": "High/Medium/Low",
-    "confidence": 85
+    "category": "Police/Fire/Medical based on real data patterns",
+    "priority": "High/Medium/Low based on actual severity levels",
+    "confidence": 85,
+    "nenaCode": "E/P1/P2 based on NENA standards",
+    "responseTime": "Target response time based on real data"
   },
   "routing": [
-    "Suggested unit 1",
-    "Suggested unit 2"
-  ]
+    "Suggested unit 1 based on real dispatch patterns",
+    "Suggested unit 2 based on real dispatch patterns"
+  ],
+  "dataSource": "NYC/Seattle/NENA datasets",
+  "severityLevel": "1-6 based on real severity codes"
 }
 
-Focus on emergency response needs. Be concise and actionable. Return ONLY the JSON object, no other text.`;
+Focus on emergency response needs using real-world data patterns. Be concise and actionable. Return ONLY the JSON object, no other text.`;
 
         try {
-            console.log('Calling Ollama for incident analysis...');
+            console.log('Calling Ollama for data-driven incident analysis...');
             const response = await this.generateResponse(prompt);
             console.log('Raw Ollama response:', response);
             
             const parsed = this.parseJSONResponse(response);
             if (parsed) {
                 console.log('Successfully parsed Ollama response:', parsed);
-                return parsed;
+                // Enhance with real-world data
+                return this.enhanceWithRealWorldData(parsed, realWorldAnalysis, dataAnalysis);
             } else {
-                console.log('Failed to parse Ollama response, using mock analysis');
-                return this.mockAIAnalysis(transcript);
+                console.log('Failed to parse Ollama response, using data-driven analysis');
+                return this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
             }
         } catch (error) {
             console.error('Error analyzing incident with Ollama:', error);
-            return this.mockAIAnalysis(transcript);
+            return this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
         }
     }
 
@@ -414,6 +429,177 @@ Consider the severity and type of incident.`;
         }
 
         return routing;
+    }
+
+    generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis) {
+        // Generate analysis based on real-world data
+        const urgentBrief = this.generateUrgentBriefFromData(realWorldAnalysis, dataAnalysis);
+        const summary = this.extractSummaryFromData(transcript, realWorldAnalysis);
+        const questions = this.generateQuestionsFromData(realWorldAnalysis);
+        const classification = this.enhanceClassificationWithData(realWorldAnalysis, dataAnalysis);
+        const routing = realWorldAnalysis.routing || this.mockRouting(realWorldAnalysis.category, realWorldAnalysis.priority);
+
+        return {
+            urgentBrief,
+            summary,
+            questions,
+            classification,
+            routing,
+            dataSource: dataAnalysis.source || 'Real-world datasets',
+            severityLevel: realWorldAnalysis.severity || 6,
+            nenaCode: realWorldAnalysis.nenaCode || 'P2'
+        };
+    }
+
+    generateUrgentBriefFromData(realWorldAnalysis, dataAnalysis) {
+        const priority = realWorldAnalysis.priority || 'Low';
+        const category = realWorldAnalysis.category || 'Police';
+        const severity = realWorldAnalysis.severity || 6;
+        const keywords = realWorldAnalysis.keywords || [];
+        
+        let brief = `[${priority}] `;
+        
+        // Generate specific briefs based on keywords and severity
+        if (keywords.includes('ROBBERY')) {
+            brief += 'Armed robbery in progress - immediate police response required';
+        } else if (keywords.includes('ASSAULT') || keywords.includes('raping')) {
+            brief += 'Violent assault in progress - immediate police response required';
+        } else if (keywords.includes('ANIMAL_EMERGENCY')) {
+            brief += 'Animal emergency - immediate response required';
+        } else if (keywords.includes('FIRE')) {
+            brief += 'Fire emergency - immediate fire response required';
+        } else if (keywords.includes('MEDICAL') || keywords.includes('CARDIAC')) {
+            brief += 'Medical emergency - immediate EMS response required';
+        } else if (keywords.includes('EMERGENCY') || keywords.includes('help')) {
+            brief += 'Emergency in progress - immediate response required';
+        } else {
+            // Generic briefs based on category and severity
+            if (category === 'Police') {
+                if (severity <= 2) brief += 'Police emergency - immediate response required';
+                else if (severity <= 4) brief += 'Police incident - standard response';
+                else brief += 'Police call - routine response';
+            } else if (category === 'Fire') {
+                if (severity <= 2) brief += 'Fire emergency - immediate response required';
+                else if (severity <= 4) brief += 'Fire incident - standard response';
+                else brief += 'Fire call - routine response';
+            } else if (category === 'Medical') {
+                if (severity <= 2) brief += 'Medical emergency - immediate response required';
+                else if (severity <= 4) brief += 'Medical incident - standard response';
+                else brief += 'Medical call - routine response';
+            }
+        }
+
+        return brief;
+    }
+
+    extractSummaryFromData(transcript, realWorldAnalysis) {
+        const lowerTranscript = transcript.toLowerCase();
+        
+        return {
+            who: this.extractWhoFromTranscript(lowerTranscript),
+            what: realWorldAnalysis.keywords ? realWorldAnalysis.keywords.join(', ') : 'Incident reported',
+            where: this.extractWhereFromTranscript(lowerTranscript),
+            when: new Date().toLocaleString(),
+            injuries: this.extractInjuriesFromTranscript(lowerTranscript),
+            suspects: this.extractSuspectsFromTranscript(lowerTranscript)
+        };
+    }
+
+    extractWhoFromTranscript(transcript) {
+        if (transcript.includes('caller') || transcript.includes('i am') || transcript.includes('i got')) return 'Caller reporting';
+        if (transcript.includes('witness')) return 'Witness reporting';
+        return 'Unknown caller';
+    }
+
+    extractWhereFromTranscript(transcript) {
+        // Simple location extraction - in production, use NLP
+        const locationPatterns = [
+            /at (\d+ [^,]+)/i,
+            /on ([^,]+ street)/i,
+            /near ([^,]+)/i,
+            /(\d+ [^,]+ avenue)/i,
+            /at my house/i,
+            /at home/i
+        ];
+
+        for (const pattern of locationPatterns) {
+            const match = transcript.match(pattern);
+            if (match) return match[1] || 'Residential location';
+        }
+
+        if (transcript.includes('house') || transcript.includes('home')) return 'Residential location';
+        return 'Location to be determined';
+    }
+
+    extractInjuriesFromTranscript(transcript) {
+        if (transcript.includes('injured') || transcript.includes('hurt') || transcript.includes('bleeding')) return 'Injuries reported';
+        if (transcript.includes('no injuries') || transcript.includes('no one hurt')) return 'No injuries';
+        if (transcript.includes('raping') || transcript.includes('assault')) return 'Potential injuries - medical attention needed';
+        return 'Injury status unknown';
+    }
+
+    extractSuspectsFromTranscript(transcript) {
+        if (transcript.includes('suspect') || transcript.includes('perpetrator') || transcript.includes('robbery') || transcript.includes('raping')) {
+            if (transcript.includes('armed') || transcript.includes('weapon')) return 'Armed suspect(s)';
+            return 'Suspect(s) reported';
+        }
+        return 'No suspects identified';
+    }
+
+    generateQuestionsFromData(realWorldAnalysis) {
+        const questions = [];
+        const category = realWorldAnalysis.category;
+        const priority = realWorldAnalysis.priority;
+        
+        if (category === 'Police') {
+            if (priority === 'High') {
+                questions.push('Are there any weapons involved?');
+                questions.push('Is anyone injured?');
+                questions.push('Can you describe the suspect(s)?');
+            } else {
+                questions.push('What is the nature of the incident?');
+                questions.push('Are there any witnesses?');
+                questions.push('When did this occur?');
+            }
+        } else if (category === 'Fire') {
+            questions.push('Is anyone trapped inside?');
+            questions.push('What is burning?');
+            questions.push('Is the fire spreading?');
+        } else if (category === 'Medical') {
+            questions.push('Is the person conscious?');
+            questions.push('Are they breathing?');
+            questions.push('What are the symptoms?');
+        }
+
+        return questions.slice(0, 3);
+    }
+
+    enhanceClassificationWithData(realWorldAnalysis, dataAnalysis) {
+        return {
+            category: realWorldAnalysis.category || 'Police',
+            priority: realWorldAnalysis.priority || 'Low',
+            confidence: realWorldAnalysis.confidence || 60,
+            nenaCode: realWorldAnalysis.nenaCode || 'P2',
+            responseTime: realWorldAnalysis.responseTime || '30 minutes',
+            severityLevel: realWorldAnalysis.severity || 6,
+            dataSource: dataAnalysis.source || 'Real-world datasets'
+        };
+    }
+
+    enhanceWithRealWorldData(ollamaResponse, realWorldAnalysis, dataAnalysis) {
+        // Enhance Ollama response with real-world data
+        return {
+            ...ollamaResponse,
+            classification: {
+                ...ollamaResponse.classification,
+                nenaCode: realWorldAnalysis.nenaCode || ollamaResponse.classification.nenaCode,
+                responseTime: realWorldAnalysis.responseTime || ollamaResponse.classification.responseTime,
+                severityLevel: realWorldAnalysis.severity || ollamaResponse.classification.severityLevel,
+                dataSource: dataAnalysis.source || 'NYC/Seattle/NENA datasets'
+            },
+            dataSource: dataAnalysis.source || 'NYC/Seattle/NENA datasets',
+            severityLevel: realWorldAnalysis.severity || 6
+        };
     }
 }
 

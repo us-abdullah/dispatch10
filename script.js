@@ -41,6 +41,10 @@ class DispatchAI {
         this.aiStatusText = document.getElementById('aiStatusText');
         this.aiProcessingIndicator = document.getElementById('aiProcessingIndicator');
 
+        // Data source elements
+        this.dataSource = document.getElementById('dataSource');
+        this.nenaCode = document.getElementById('nenaCode');
+
         // Status elements
         this.statusDot = document.getElementById('statusDot');
         this.statusText = document.getElementById('statusText');
@@ -539,6 +543,14 @@ class DispatchAI {
         // Update confidence
         this.confidenceFill.style.width = `${classification.confidence}%`;
         this.confidenceText.textContent = `${classification.confidence}%`;
+
+        // Update data source and NENA code
+        if (classification.dataSource) {
+            this.dataSource.textContent = classification.dataSource;
+        }
+        if (classification.nenaCode) {
+            this.nenaCode.textContent = classification.nenaCode;
+        }
     }
 
     updateRouting(routing) {

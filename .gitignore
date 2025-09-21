@@ -65,3 +65,7 @@ build/
 
 # Local development
 .local/
+
+# Large data files
+Sources/seattle.csv
+*.csv

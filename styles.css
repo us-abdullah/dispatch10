@@ -496,6 +496,36 @@ body {
     min-width: 35px;
 }
 
+.data-source-section, .nena-code-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.data-source-section label, .nena-code-section label {
+    font-size: 0.9rem;
+    color: #888;
+    font-weight: 500;
+}
+
+.data-source, .nena-code {
+    font-size: 0.8rem;
+    color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid #00ff88;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    text-align: center;
+    font-weight: 600;
+}
+
+.nena-code {
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1);
+    border-color: #ff6b6b;
+}
+
 /* Routing Suggestions */
 .routing-suggestions {
     padding: 1rem;
