@@ -69,3 +69,4 @@ build/
 # Large data files
 Sources/seattle.csv
 *.csv
+.vercel

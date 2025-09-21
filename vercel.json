@@ -2,14 +2,26 @@
   "version": 2,
   "builds": [
     {
+      "src": "landing.html",
+      "use": "@vercel/static"
+    },
+    {
       "src": "index.html",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/",
+      "dest": "/landing.html"
+    },
+    {
+      "src": "/demo",
       "dest": "/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/landing.html"
     }
   ],
   "headers": [
