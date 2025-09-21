@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DispatchAI - Call Queue & Routing</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .routing-page {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #0a0a0a;
+            color: #ffffff;
+        }
+
+        .routing-header {
+            background: #1a1a1a;
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .routing-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ff4444;
+        }
+
+        .back-btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .back-btn:hover {
+            background: #555;
+        }
+
+        .routing-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .queue-panel {
+            flex: 1;
+            padding: 1rem;
+            border-right: 2px solid #333;
+            overflow-y: auto;
+        }
+
+        .history-panel {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .panel-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #ff4444;
+        }
+
+        .call-item {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .call-item:hover {
+            border-color: #ff4444;
+            background: #222;
+        }
+
+        .call-item.high-priority {
+            border-left: 4px solid #ff4444;
+        }
+
+        .call-item.medium-priority {
+            border-left: 4px solid #ffaa00;
+        }
+
+        .call-item.low-priority {
+            border-left: 4px solid #00aa44;
+        }
+
+        .call-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .caller-id {
+            font-weight: bold;
+            color: #ff4444;
+        }
+
+        .priority-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .priority-high {
+            background: #ff4444;
+            color: white;
+        }
+
+        .priority-medium {
+            background: #ffaa00;
+            color: black;
+        }
+
+        .priority-low {
+            background: #00aa44;
+            color: white;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-in-progress {
+            background: #0066cc;
+            color: white;
+        }
+
+        .status-completed {
+            background: #00aa44;
+            color: white;
+        }
+
+        .urgent-brief {
+            font-size: 0.9rem;
+            color: #ccc;
+            margin: 0.5rem 0;
+            line-height: 1.4;
+        }
+
+        .dispatch-time {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 0.5rem;
+        }
+
+        .timer-live {
+            color: #ff4444;
+            font-weight: bold;
+        }
+
+        .call-details {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+
+        .outcome-tag {
+            display: inline-block;
+            padding: 0.2rem 0.4rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+
+        .outcome-exported {
+            background: #0066cc;
+            color: white;
+        }
+
+        .outcome-resolved {
+            background: #00aa44;
+            color: white;
+        }
+
+        .outcome-escalated {
+            background: #ff4444;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #666;
+            padding: 2rem;
+            font-style: italic;
+        }
+
+        .call-summary {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .summary-title {
+            font-weight: bold;
+            color: #ff4444;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-details {
+            font-size: 0.9rem;
+            color: #ccc;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="routing-page">
+        <div class="routing-header">
+            <div class="routing-title">DispatchAI - Call Queue & Routing</div>
+            <button class="back-btn" id="backBtn">← Back to Dispatch</button>
+        </div>
+
+        <div class="routing-content">
+            <!-- Active Calls Queue -->
+            <div class="queue-panel">
+                <div class="panel-title">Active Calls Queue</div>
+                <div id="activeCallsQueue">
+                    <div class="empty-state">No active calls</div>
+                </div>
+            </div>
+
+            <!-- Call History -->
+            <div class="history-panel">
+                <div class="panel-title">Call History</div>
+                <div id="callHistory">
+                    <div class="empty-state">No completed calls</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="routing.js"></script>
+</body>
+</html>

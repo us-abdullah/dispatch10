@@ -26,7 +26,7 @@
                 <button class="btn btn-primary" id="startCallBtn">Start Call</button>
                 <button class="btn btn-secondary" id="stopCallBtn" disabled>Stop Call</button>
                 <button class="btn btn-small" id="testOllamaBtn">Test AI</button>
-                <button class="btn btn-small" id="radioModalBtn">Radio Log</button>
+                <button class="btn btn-small" id="routingBtn">Call Queue</button>
             </div>
         </header>
 
@@ -56,6 +56,10 @@
                         <h3>Urgent Brief</h3>
                         <div class="brief-controls">
                             <div class="priority-badge" id="priorityBadge">LOW</div>
+                            <div class="dispatch-timer" id="dispatchTimer" style="display: none;">
+                                <span class="timer-label">Dispatch Time:</span>
+                                <span class="timer-value" id="timerValue">00:00</span>
+                            </div>
                             <div class="ai-processing" id="aiProcessingIndicator" style="display: none;">
                                 <div class="loading"></div>
                                 <span>AI Processing...</span>
@@ -139,6 +143,9 @@
                             <label>NENA Code:</label>
                             <div class="nena-code" id="nenaCode">P2</div>
                         </div>
+                        <div class="route-section">
+                            <button class="btn btn-route" id="routeBtn" disabled>Route Call</button>
+                        </div>
                     </div>
                 </div>
 
@@ -194,24 +201,6 @@
             </div>
         </footer>
 
-        <!-- Radio Log Modal (Optional) -->
-        <div class="modal" id="radioModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Radio Chatter Log</h3>
-                    <button class="modal-close" id="closeRadioModal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="radio-input">
-                        <textarea placeholder="Paste radio chatter or upload audio file..." id="radioInput"></textarea>
-                        <button class="btn-small" id="processRadioBtn">Process</button>
-                    </div>
-                    <div class="radio-log" id="radioLog">
-                        <p>No radio chatter processed yet</p>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Notification Toast -->

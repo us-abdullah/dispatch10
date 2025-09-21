@@ -1,0 +1,326 @@
+class CallQueueManager {
+    constructor() {
+        this.activeCalls = [];
+        this.completedCalls = [];
+        this.callIdCounter = 1;
+        this.timers = new Map(); // Store active timers
+        
+        this.initializeElements();
+        this.setupEventListeners();
+        this.loadFromStorage();
+    }
+
+    initializeElements() {
+        this.activeCallsQueue = document.getElementById('activeCallsQueue');
+        this.callHistory = document.getElementById('callHistory');
+        this.backBtn = document.getElementById('backBtn');
+    }
+
+    setupEventListeners() {
+        this.backBtn.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        // Listen for messages from main page
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'newCall') {
+                this.addActiveCall(event.data.callData);
+            } else if (event.data.type === 'routeCall') {
+                this.routeCall(event.data.callId);
+            } else if (event.data.type === 'updateCall') {
+                this.updateActiveCall(event.data.callId, event.data.callData);
+            }
+        });
+    }
+
+    addActiveCall(callData) {
+        const callId = this.callIdCounter++;
+        const call = {
+            id: callId,
+            callerId: this.generateCallerId(),
+            urgentBrief: callData.urgentBrief || 'No brief available',
+            priority: callData.priority || 'Low',
+            category: callData.category || 'Police',
+            startTime: new Date(),
+            status: 'In Progress',
+            transcript: callData.transcript || '',
+            classification: callData.classification || {},
+            routing: callData.routing || []
+        };
+
+        this.activeCalls.push(call);
+        this.startTimer(callId);
+        this.renderActiveCalls();
+        this.saveToStorage();
+    }
+
+    updateActiveCall(callId, callData) {
+        const call = this.activeCalls.find(c => c.id === callId);
+        if (call) {
+            call.urgentBrief = callData.urgentBrief || call.urgentBrief;
+            call.priority = callData.priority || call.priority;
+            call.category = callData.category || call.category;
+            call.transcript = callData.transcript || call.transcript;
+            call.classification = callData.classification || call.classification;
+            call.routing = callData.routing || call.routing;
+            
+            this.renderActiveCalls();
+            this.saveToStorage();
+        }
+    }
+
+    routeCall(callId) {
+        const callIndex = this.activeCalls.findIndex(c => c.id === callId);
+        if (callIndex !== -1) {
+            const call = this.activeCalls[callIndex];
+            call.status = 'Completed';
+            call.endTime = new Date();
+            call.dispatchTime = this.getDispatchTime(callId);
+            
+            // Move to completed calls
+            this.completedCalls.unshift(call); // Add to beginning
+            this.activeCalls.splice(callIndex, 1);
+            
+            // Stop timer
+            this.stopTimer(callId);
+            
+            this.renderActiveCalls();
+            this.renderCallHistory();
+            this.saveToStorage();
+        }
+    }
+
+    generateCallerId() {
+        const prefixes = ['CALL', 'EMRG', 'DISP', 'URGT'];
+        const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+        const number = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+        return `${prefix}-${number}`;
+    }
+
+    startTimer(callId) {
+        const call = this.activeCalls.find(c => c.id === callId);
+        if (call) {
+            const timer = setInterval(() => {
+                const now = new Date();
+                const elapsed = Math.floor((now - call.startTime) / 1000);
+                call.elapsedTime = elapsed;
+                this.renderActiveCalls();
+            }, 1000);
+            
+            this.timers.set(callId, timer);
+        }
+    }
+
+    stopTimer(callId) {
+        const timer = this.timers.get(callId);
+        if (timer) {
+            clearInterval(timer);
+            this.timers.delete(callId);
+        }
+    }
+
+    getDispatchTime(callId) {
+        const call = this.activeCalls.find(c => c.id === callId) || 
+                   this.completedCalls.find(c => c.id === callId);
+        if (call) {
+            const endTime = call.endTime || new Date();
+            return Math.floor((endTime - call.startTime) / 1000);
+        }
+        return 0;
+    }
+
+    formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    getPriorityClass(priority) {
+        switch (priority.toLowerCase()) {
+            case 'high': return 'priority-high';
+            case 'medium': return 'priority-medium';
+            case 'low': return 'priority-low';
+            default: return 'priority-low';
+        }
+    }
+
+    getStatusClass(status) {
+        switch (status) {
+            case 'In Progress': return 'status-in-progress';
+            case 'Completed': return 'status-completed';
+            default: return 'status-in-progress';
+        }
+    }
+
+    getOutcomeTag(call) {
+        if (call.exported) return { class: 'outcome-exported', text: 'Exported Pack' };
+        if (call.escalated) return { class: 'outcome-escalated', text: 'Escalated' };
+        return { class: 'outcome-resolved', text: 'Resolved' };
+    }
+
+    renderActiveCalls() {
+        if (this.activeCalls.length === 0) {
+            this.activeCallsQueue.innerHTML = '<div class="empty-state">No active calls</div>';
+            return;
+        }
+
+        // Sort by priority (High -> Medium -> Low)
+        const sortedCalls = [...this.activeCalls].sort((a, b) => {
+            const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+            return priorityOrder[b.priority] - priorityOrder[a.priority];
+        });
+
+        this.activeCallsQueue.innerHTML = sortedCalls.map(call => `
+            <div class="call-item ${call.priority.toLowerCase()}-priority" onclick="this.showCallDetails(${call.id})">
+                <div class="call-header">
+                    <div class="caller-id">${call.callerId}</div>
+                    <div class="priority-badge ${this.getPriorityClass(call.priority)}">${call.priority}</div>
+                    <div class="status-badge ${this.getStatusClass(call.status)}">${call.status}</div>
+                </div>
+                <div class="urgent-brief">${call.urgentBrief}</div>
+                <div class="dispatch-time ${call.status === 'In Progress' ? 'timer-live' : ''}">
+                    Dispatch Time: ${this.formatTime(call.elapsedTime || 0)}
+                </div>
+                <div class="call-details">
+                    Category: ${call.category} | Started: ${call.startTime.toLocaleTimeString()}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderCallHistory() {
+        if (this.completedCalls.length === 0) {
+            this.callHistory.innerHTML = '<div class="empty-state">No completed calls</div>';
+            return;
+        }
+
+        this.callHistory.innerHTML = this.completedCalls.map(call => {
+            const outcome = this.getOutcomeTag(call);
+            return `
+                <div class="call-item" onclick="this.showCallDetails(${call.id})">
+                    <div class="call-header">
+                        <div class="caller-id">${call.callerId}</div>
+                        <div class="priority-badge ${this.getPriorityClass(call.priority)}">${call.priority}</div>
+                        <div class="status-badge ${this.getStatusClass(call.status)}">${call.status}</div>
+                    </div>
+                    <div class="urgent-brief">${call.urgentBrief}</div>
+                    <div class="dispatch-time">
+                        Dispatch Time: ${this.formatTime(call.dispatchTime || 0)}
+                    </div>
+                    <div class="call-details">
+                        Category: ${call.category} | Completed: ${call.endTime.toLocaleTimeString()}
+                    </div>
+                    <div class="outcome-tag ${outcome.class}">${outcome.text}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    showCallDetails(callId) {
+        const call = this.activeCalls.find(c => c.id === callId) || 
+                    this.completedCalls.find(c => c.id === callId);
+        
+        if (call) {
+            const details = `
+                <div class="call-summary">
+                    <div class="summary-title">Call Details - ${call.callerId}</div>
+                    <div class="summary-details">
+                        <strong>Priority:</strong> ${call.priority}<br>
+                        <strong>Category:</strong> ${call.category}<br>
+                        <strong>Status:</strong> ${call.status}<br>
+                        <strong>Start Time:</strong> ${call.startTime.toLocaleString()}<br>
+                        ${call.endTime ? `<strong>End Time:</strong> ${call.endTime.toLocaleString()}<br>` : ''}
+                        <strong>Dispatch Time:</strong> ${this.formatTime(call.dispatchTime || call.elapsedTime || 0)}<br><br>
+                        <strong>Urgent Brief:</strong><br>
+                        ${call.urgentBrief}<br><br>
+                        <strong>Transcript:</strong><br>
+                        ${call.transcript || 'No transcript available'}<br><br>
+                        <strong>Classification:</strong><br>
+                        ${JSON.stringify(call.classification, null, 2)}<br><br>
+                        <strong>Routing Suggestions:</strong><br>
+                        ${call.routing.map(r => `• ${r}`).join('<br>')}
+                    </div>
+                </div>
+            `;
+            
+            // Create modal or show in a dedicated area
+            this.showModal('Call Details', details);
+        }
+    }
+
+    showModal(title, content) {
+        // Simple modal implementation
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        `;
+        
+        modal.innerHTML = `
+            <div style="background: #1a1a1a; padding: 2rem; border-radius: 8px; max-width: 80%; max-height: 80%; overflow-y: auto;">
+                <h3 style="color: #ff4444; margin-bottom: 1rem;">${title}</h3>
+                <div style="color: #ccc; line-height: 1.6;">${content}</div>
+                <button onclick="this.parentElement.parentElement.remove()" 
+                        style="background: #ff4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; margin-top: 1rem; cursor: pointer;">
+                    Close
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    saveToStorage() {
+        localStorage.setItem('dispatchAI_activeCalls', JSON.stringify(this.activeCalls));
+        localStorage.setItem('dispatchAI_completedCalls', JSON.stringify(this.completedCalls));
+    }
+
+    loadFromStorage() {
+        try {
+            const activeCalls = localStorage.getItem('dispatchAI_activeCalls');
+            const completedCalls = localStorage.getItem('dispatchAI_completedCalls');
+            
+            if (activeCalls) {
+                this.activeCalls = JSON.parse(activeCalls).map(call => {
+                    call.startTime = new Date(call.startTime);
+                    if (call.endTime) call.endTime = new Date(call.endTime);
+                    return call;
+                });
+                
+                // Restart timers for active calls
+                this.activeCalls.forEach(call => {
+                    if (call.status === 'In Progress') {
+                        this.startTimer(call.id);
+                    }
+                });
+            }
+            
+            if (completedCalls) {
+                this.completedCalls = JSON.parse(completedCalls).map(call => {
+                    call.startTime = new Date(call.startTime);
+                    if (call.endTime) call.endTime = new Date(call.endTime);
+                    return call;
+                });
+            }
+            
+            this.renderActiveCalls();
+            this.renderCallHistory();
+        } catch (error) {
+            console.error('Error loading from storage:', error);
+        }
+    }
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    window.callQueueManager = new CallQueueManager();
+});

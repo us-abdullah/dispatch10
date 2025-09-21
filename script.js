@@ -9,6 +9,9 @@ class DispatchAI {
         this.retentionTimer = null;
         this.aiProcessingTimer = null;
         this.lastProcessedLength = 0;
+        this.dispatchStartTime = null;
+        this.dispatchTimerInterval = null;
+        this.currentCallId = null;
         
         this.initializeElements();
         this.setupEventListeners();
@@ -25,9 +28,8 @@ class DispatchAI {
         this.exportTranscriptBtn = document.getElementById('exportTranscriptBtn');
         this.exportIncidentBtn = document.getElementById('exportIncidentBtn');
         this.clearAllDataBtn = document.getElementById('clearAllDataBtn');
-        this.processRadioBtn = document.getElementById('processRadioBtn');
-        this.closeRadioModal = document.getElementById('closeRadioModal');
-        this.radioModalBtn = document.getElementById('radioModalBtn');
+        this.routingBtn = document.getElementById('routingBtn');
+        this.routeBtn = document.getElementById('routeBtn');
         this.testOllamaBtn = document.getElementById('testOllamaBtn');
 
         // Notification elements
@@ -44,6 +46,10 @@ class DispatchAI {
         // Data source elements
         this.dataSource = document.getElementById('dataSource');
         this.nenaCode = document.getElementById('nenaCode');
+
+        // Dispatch timer elements
+        this.dispatchTimer = document.getElementById('dispatchTimer');
+        this.timerValue = document.getElementById('timerValue');
 
         // Status elements
         this.statusDot = document.getElementById('statusDot');
@@ -89,18 +95,13 @@ class DispatchAI {
         this.clearAllDataBtn.addEventListener('click', () => this.clearAllData());
         this.dataRetentionSelect.addEventListener('change', () => this.updateRetentionTimer());
 
-        // Radio modal
-        this.radioModalBtn.addEventListener('click', () => this.openRadioModal());
-        this.processRadioBtn.addEventListener('click', () => this.processRadioChatter());
-        this.closeRadioModal.addEventListener('click', () => this.closeModal());
+        // Routing and dispatch
+        this.routingBtn.addEventListener('click', () => this.openRoutingPage());
+        this.routeBtn.addEventListener('click', () => this.routeCall());
 
         // Test Ollama
         this.testOllamaBtn.addEventListener('click', () => this.testOllama());
 
-        // Click outside modal to close
-        this.radioModal.addEventListener('click', (e) => {
-            if (e.target === this.radioModal) this.closeModal();
-        });
 
         // Notification close
         this.notificationClose.addEventListener('click', () => this.hideNotification());
@@ -183,6 +184,7 @@ class DispatchAI {
         try {
             this.recognition.start();
             this.startRetentionTimer();
+            this.startDispatchTimer();
             this.showNotification('Call started - listening for audio', 2000);
         } catch (error) {
             this.showError('Failed to start speech recognition');
@@ -193,6 +195,7 @@ class DispatchAI {
     stopCall() {
         this.isRecording = false;
         this.recognition.stop();
+        this.stopDispatchTimer();
         this.updateStatus('Ready', 'ready');
         this.startCallBtn.disabled = false;
         this.stopCallBtn.disabled = true;
@@ -551,6 +554,9 @@ class DispatchAI {
         if (classification.nenaCode) {
             this.nenaCode.textContent = classification.nenaCode;
         }
+
+        // Enable route button when we have classification
+        this.routeBtn.disabled = false;
     }
 
     updateRouting(routing) {
@@ -817,6 +823,90 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
                 console.log('AI Status: Mock AI is active');
             }
         }, 1000);
+    }
+
+    startDispatchTimer() {
+        this.dispatchStartTime = new Date();
+        this.dispatchTimer.style.display = 'flex';
+        
+        this.dispatchTimerInterval = setInterval(() => {
+            if (this.dispatchStartTime) {
+                const elapsed = Math.floor((new Date() - this.dispatchStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                this.timerValue.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }, 1000);
+    }
+
+    stopDispatchTimer() {
+        if (this.dispatchTimerInterval) {
+            clearInterval(this.dispatchTimerInterval);
+            this.dispatchTimerInterval = null;
+        }
+        this.dispatchTimer.style.display = 'none';
+        this.dispatchStartTime = null;
+    }
+
+    getDispatchTime() {
+        if (this.dispatchStartTime) {
+            return Math.floor((new Date() - this.dispatchStartTime) / 1000);
+        }
+        return 0;
+    }
+
+    openRoutingPage() {
+        window.open('routing.html', '_blank');
+    }
+
+    routeCall() {
+        if (!this.currentIncident) {
+            this.showError('No active incident to route');
+            return;
+        }
+
+        const dispatchTime = this.getDispatchTime();
+        const callData = {
+            callId: this.currentCallId || Date.now(),
+            urgentBrief: this.currentIncident.urgentBrief,
+            priority: this.currentIncident.classification?.priority || 'Low',
+            category: this.currentIncident.classification?.category || 'Police',
+            transcript: this.transcript.map(entry => entry.text).join(' '),
+            classification: this.currentIncident.classification,
+            routing: this.currentIncident.routing,
+            dispatchTime: dispatchTime
+        };
+
+        // Send to routing page
+        if (window.opener) {
+            window.opener.postMessage({
+                type: 'routeCall',
+                callId: callData.callId,
+                callData: callData
+            }, '*');
+        }
+
+        // Store locally
+        this.storeCompletedCall(callData);
+
+        this.showNotification(`Call routed successfully (${Math.floor(dispatchTime/60)}:${(dispatchTime%60).toString().padStart(2, '0')})`, 3000);
+        this.routeBtn.disabled = true;
+    }
+
+    storeCompletedCall(callData) {
+        const completedCalls = JSON.parse(localStorage.getItem('dispatchAI_completedCalls') || '[]');
+        completedCalls.unshift({
+            ...callData,
+            timestamp: new Date().toISOString(),
+            outcome: 'Exported Pack'
+        });
+        
+        // Keep only last 50 calls
+        if (completedCalls.length > 50) {
+            completedCalls.splice(50);
+        }
+        
+        localStorage.setItem('dispatchAI_completedCalls', JSON.stringify(completedCalls));
     }
 
     async testOllama() {

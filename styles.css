@@ -299,6 +299,61 @@ body {
     animation: spin 1s ease-in-out infinite;
 }
 
+.dispatch-timer {
+    display: flex;
+    align-items: center;
+    background: #1a1a1a;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    border: 1px solid #ff4444;
+    margin-left: 1rem;
+}
+
+.timer-label {
+    font-size: 0.8rem;
+    color: #ccc;
+    margin-right: 0.5rem;
+}
+
+.timer-value {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #ff4444;
+    font-family: 'Courier New', monospace;
+}
+
+.route-section {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.btn-route {
+    background: #ff4444;
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-route:hover:not(:disabled) {
+    background: #ff6666;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
+}
+
+.btn-route:disabled {
+    background: #666;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 .brief-header h3 {
     color: #ff4444;
     font-size: 1rem;
