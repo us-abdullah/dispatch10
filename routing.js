@@ -219,6 +219,18 @@ class CallQueueManager {
         return { class: 'outcome-resolved', text: 'Resolved' };
     }
 
+    getIncidentType(call) {
+        if (call.urgentBrief) {
+            if (call.urgentBrief.includes('robbery') || call.urgentBrief.includes('ROBBERY')) return 'Armed Robbery';
+            if (call.urgentBrief.includes('assault') || call.urgentBrief.includes('ASSAULT')) return 'Violent Assault';
+            if (call.urgentBrief.includes('shooting') || call.urgentBrief.includes('SHOOTING')) return 'Active Shooting';
+            if (call.urgentBrief.includes('fire') || call.urgentBrief.includes('FIRE')) return 'Fire Emergency';
+            if (call.urgentBrief.includes('medical') || call.urgentBrief.includes('MEDICAL')) return 'Medical Emergency';
+            if (call.urgentBrief.includes('animal') || call.urgentBrief.includes('ANIMAL')) return 'Animal Emergency';
+        }
+        return call.category || 'Police Incident';
+    }
+
     renderActiveCalls() {
         if (this.activeCalls.length === 0) {
             this.activeCallsQueue.innerHTML = '<div class="empty-state">No active calls</div>';
@@ -232,7 +244,7 @@ class CallQueueManager {
         });
 
         this.activeCallsQueue.innerHTML = sortedCalls.map(call => `
-            <div class="call-item ${call.priority.toLowerCase()}-priority" onclick="this.showCallDetails(${call.id})">
+            <div class="call-item ${call.priority.toLowerCase()}-priority" onclick="window.callQueueManager.showCallDetails(${call.id})">
                 <div class="call-header">
                     <div class="caller-id">${call.callerId}</div>
                     <div class="priority-badge ${this.getPriorityClass(call.priority)}">${call.priority}</div>
@@ -244,6 +256,20 @@ class CallQueueManager {
                 </div>
                 <div class="call-details">
                     Category: ${call.category} | Started: ${call.startTime.toLocaleTimeString()}
+                </div>
+                <div class="call-summary-details">
+                    <div class="summary-item">
+                        <span class="summary-label">Incident Type:</span>
+                        <span class="summary-value">${this.getIncidentType(call)}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Confidence:</span>
+                        <span class="summary-value">${call.classification?.confidence || 0}%</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">NENA Code:</span>
+                        <span class="summary-value">${call.classification?.nenaCode || 'N/A'}</span>
+                    </div>
                 </div>
             </div>
         `).join('');
@@ -257,19 +283,36 @@ class CallQueueManager {
 
         this.callHistory.innerHTML = this.completedCalls.map(call => {
             const outcome = this.getOutcomeTag(call);
+            const priorityClass = this.getPriorityClass(call.priority);
+            const statusClass = this.getStatusClass(call.status);
+            
             return `
-                <div class="call-item" onclick="this.showCallDetails(${call.id})">
+                <div class="call-item ${call.priority.toLowerCase()}-priority" onclick="window.callQueueManager.showCallDetails(${call.id})">
                     <div class="call-header">
                         <div class="caller-id">${call.callerId}</div>
-                        <div class="priority-badge ${this.getPriorityClass(call.priority)}">${call.priority}</div>
-                        <div class="status-badge ${this.getStatusClass(call.status)}">${call.status}</div>
+                        <div class="priority-badge ${priorityClass}">${call.priority}</div>
+                        <div class="status-badge ${statusClass}">${call.status}</div>
                     </div>
                     <div class="urgent-brief">${call.urgentBrief}</div>
                     <div class="dispatch-time">
                         Dispatch Time: ${this.formatTime(call.dispatchTime || 0)}
                     </div>
                     <div class="call-details">
-                        Category: ${call.category} | Completed: ${call.endTime.toLocaleTimeString()}
+                        Category: ${call.category} | Completed: ${call.endTime ? call.endTime.toLocaleTimeString() : 'Unknown'}
+                    </div>
+                    <div class="call-summary-details">
+                        <div class="summary-item">
+                            <span class="summary-label">Incident Type:</span>
+                            <span class="summary-value">${this.getIncidentType(call)}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Confidence:</span>
+                            <span class="summary-value">${call.classification?.confidence || 0}%</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">NENA Code:</span>
+                            <span class="summary-value">${call.classification?.nenaCode || 'N/A'}</span>
+                        </div>
                     </div>
                     <div class="outcome-tag ${outcome.class}">${outcome.text}</div>
                 </div>
