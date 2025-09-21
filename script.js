@@ -15,6 +15,7 @@ class DispatchAI {
         this.isPaused = false;
         this.pausedTime = 0;
         this.pauseStartTime = null;
+        this.processedTranscripts = new Set();
         
         this.initializeElements();
         this.setupEventListeners();
@@ -185,6 +186,10 @@ class DispatchAI {
         }
 
         try {
+            // Clear processed transcripts and script for new call
+            this.processedTranscripts.clear();
+            this.suggestedScript.value = '';
+            
             this.recognition.start();
             this.startRetentionTimer();
             this.startDispatchTimer();
@@ -387,6 +392,17 @@ class DispatchAI {
         if (this.isPaused) {
             return;
         }
+        
+        // Create a unique key for this transcript
+        const transcriptKey = transcriptText.trim().toLowerCase();
+        
+        // Skip if we've already processed this exact transcript
+        if (this.processedTranscripts.has(transcriptKey)) {
+            return;
+        }
+        
+        // Mark this transcript as processed
+        this.processedTranscripts.add(transcriptKey);
         
         try {
             // Generate a quick script response for this specific transcript entry
@@ -629,14 +645,27 @@ class DispatchAI {
             return;
         }
 
-        // Append new script content (script already has timestamp from generation)
+        // Get current script content
+        const currentScript = this.suggestedScript.value;
+        
+        // Extract timestamp from script to check for duplicates
+        const scriptTimestamp = script.match(/\[(\d{1,2}:\d{2}:\d{2} [AP]M)\]/);
+        if (scriptTimestamp) {
+            const timestamp = scriptTimestamp[1];
+            // Check if this exact timestamp already exists
+            if (currentScript.includes(`[${timestamp}]`)) {
+                return;
+            }
+        }
+
+        // Prepend new script content (most recent at top)
         const scriptEntry = `${script}\n\n`;
         
-        // Add to existing content
-        this.suggestedScript.value += scriptEntry;
+        // Add to beginning of content (most recent first)
+        this.suggestedScript.value = scriptEntry + currentScript;
         
-        // Auto-scroll to bottom
-        this.suggestedScript.scrollTop = this.suggestedScript.scrollHeight;
+        // Auto-scroll to top to show most recent
+        this.suggestedScript.scrollTop = 0;
     }
 
     updateClassification(classification) {
