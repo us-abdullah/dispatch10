@@ -1,0 +1,23 @@
+{
+  "name": "dispatchai-copilot",
+  "version": "1.0.0",
+  "description": "AI-powered auxiliary monitor for 911 dispatchers",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "dev": "python -m http.server 8000"
+  },
+  "keywords": [
+    "911",
+    "dispatch",
+    "emergency",
+    "ai",
+    "copilot",
+    "transcription"
+  ],
+  "author": "DispatchAI Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
