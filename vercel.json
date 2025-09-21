@@ -1,27 +1,13 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "landing.html",
-      "use": "@vercel/static"
+      "source": "/",
+      "destination": "/landing.html"
     },
     {
-      "src": "index.html",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/",
-      "dest": "/landing.html"
-    },
-    {
-      "src": "/demo",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/landing.html"
+      "source": "/demo",
+      "destination": "/index.html"
     }
   ],
   "headers": [
