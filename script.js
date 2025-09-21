@@ -71,7 +71,7 @@ class DispatchAI {
         this.confidenceText = document.getElementById('confidenceText');
 
         // Other elements
-        this.questionsList = document.getElementById('questionsList');
+        this.suggestedScript = document.getElementById('suggestedScript');
         this.routingContent = document.getElementById('routingContent');
         this.radioModal = document.getElementById('radioModal');
         this.radioInput = document.getElementById('radioInput');
@@ -272,7 +272,7 @@ class DispatchAI {
                     // Update UI with analysis
                     this.updateUrgentBrief(analysis.urgentBrief);
                     this.updateSummary(analysis.summary);
-                    this.updateQuestions(analysis.questions);
+                    this.updateSuggestedScript(analysis.suggestedScript);
                     this.updateClassification(analysis.classification);
                     this.updateRouting(analysis.routing);
                     
@@ -305,7 +305,7 @@ class DispatchAI {
             // Update UI with analysis
             this.updateUrgentBrief(analysis.urgentBrief);
             this.updateSummary(analysis.summary);
-            this.updateQuestions(analysis.questions);
+            this.updateSuggestedScript(analysis.suggestedScript);
             this.updateClassification(analysis.classification);
             this.updateRouting(analysis.routing);
             
@@ -513,21 +513,21 @@ class DispatchAI {
         document.getElementById('summarySuspects').textContent = summary.suspects;
     }
 
-    updateQuestions(questions) {
-        this.questionsList.innerHTML = '';
-        
-        if (questions.length === 0) {
-            this.questionsList.innerHTML = '<p class="no-questions">No questions available</p>';
+    updateSuggestedScript(script) {
+        if (!script || script.trim() === '') {
+            this.suggestedScript.value = '';
             return;
         }
 
-        questions.forEach(question => {
-            const questionDiv = document.createElement('div');
-            questionDiv.className = 'question-item';
-            questionDiv.textContent = question;
-            questionDiv.addEventListener('click', () => this.askQuestion(question));
-            this.questionsList.appendChild(questionDiv);
-        });
+        // Append new script content with timestamp
+        const timestamp = new Date().toLocaleTimeString();
+        const scriptEntry = `[${timestamp}] ${script}\n\n`;
+        
+        // Add to existing content
+        this.suggestedScript.value += scriptEntry;
+        
+        // Auto-scroll to bottom
+        this.suggestedScript.scrollTop = this.suggestedScript.scrollHeight;
     }
 
     updateClassification(classification) {
@@ -607,8 +607,8 @@ class DispatchAI {
         this.confidenceFill.style.width = '0%';
         this.confidenceText.textContent = '0%';
 
-        // Reset questions and routing
-        this.questionsList.innerHTML = '<p class="no-questions">Start a call to get AI-suggested questions</p>';
+        // Reset script and routing
+        this.suggestedScript.value = '';
         this.routingContent.innerHTML = '<p>No routing suggestions available</p>';
     }
 
@@ -1063,7 +1063,7 @@ ${data.transcript.map(entry => `[${entry.timestamp}] ${entry.text}`).join('\n')}
                 // Update UI with test results
                 this.updateUrgentBrief(analysis.urgentBrief);
                 this.updateSummary(analysis.summary);
-                this.updateQuestions(analysis.questions);
+                this.updateSuggestedScript(analysis.suggestedScript);
                 this.updateClassification(analysis.classification);
                 this.updateRouting(analysis.routing);
                 

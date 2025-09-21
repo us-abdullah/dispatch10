@@ -110,11 +110,7 @@ Please analyze and return a JSON object with the following structure:
     "injuries": "Injury status",
     "suspects": "Suspect information if any"
   },
-  "questions": [
-    "Suggested follow-up question 1 based on real dispatch protocols",
-    "Suggested follow-up question 2 based on real dispatch protocols",
-    "Suggested follow-up question 3 based on real dispatch protocols"
-  ],
+  "suggestedScript": "Live dispatcher response script based on real dispatch protocols and current incident context",
   "classification": {
     "category": "Police/Fire/Medical based on real data patterns",
     "priority": "High/Medium/Low based on actual severity levels",
@@ -181,28 +177,29 @@ Be specific about location, suspects, injuries, and immediate threats.`;
         }
     }
 
-    async generateQuestions(transcript, category, priority) {
-        const prompt = `Generate 3 specific follow-up questions for a 911 dispatcher to ask based on this emergency call.
+    async generateSuggestedScript(transcript, category, priority, realWorldAnalysis) {
+        const prompt = `Generate a live dispatcher response script for this emergency call based on real 911 dispatch protocols.
 
 Transcript: "${transcript}"
 Category: ${category}
 Priority: ${priority}
+Data Sources: ${realWorldAnalysis.dataSource || 'Real-world datasets'}
 
-Focus on:
-- Safety information (injuries, weapons, threats)
-- Location details (address, landmarks, directions)
-- Suspect descriptions (if applicable)
-- Current situation status
+Based on actual 911 dispatch protocols from NYC, Seattle, and NENA standards, generate a professional dispatcher response script that includes:
+- Immediate acknowledgment and reassurance
+- Critical information gathering questions
+- Safety instructions for the caller
+- Next steps based on incident type and priority
+- Professional 911 dispatch language and tone
 
-Return as a JSON array of strings.`;
+Return a single, comprehensive script response that a dispatcher can use to respond to this specific call. Use real dispatch protocols and terminology.`;
 
         try {
             const response = await this.generateResponse(prompt);
-            const parsed = JSON.parse(response);
-            return Array.isArray(parsed) ? parsed : this.generateMockQuestions(category, priority);
+            return response.trim();
         } catch (error) {
-            console.error('Error generating questions:', error);
-            return this.generateMockQuestions(category, priority);
+            console.error('Error generating suggested script:', error);
+            return this.generateMockSuggestedScript(category, priority, realWorldAnalysis);
         }
     }
 
@@ -315,7 +312,7 @@ Consider the severity and type of incident.`;
         return {
             urgentBrief: this.generateMockUrgentBrief(transcript),
             summary: this.extractMockSummary(transcript),
-            questions: this.generateMockQuestions(category, priority),
+            suggestedScript: this.generateMockSuggestedScript(category, priority),
             classification: { category, priority, confidence },
             routing: this.mockRouting(category, priority)
         };
@@ -374,24 +371,30 @@ Consider the severity and type of incident.`;
         return 'Location to be determined';
     }
 
-    generateMockQuestions(category, priority) {
-        const questions = [];
+    generateMockSuggestedScript(category, priority) {
+        const timestamp = new Date().toLocaleTimeString();
         
         if (category === 'Police') {
-            questions.push('Are the suspects armed?');
-            questions.push('What direction are they heading?');
-            questions.push('Can you describe the suspects?');
+            if (priority === 'High') {
+                return `[${timestamp}] "911, what's your emergency?" 
+
+"Stay calm and stay safe. Are you in immediate danger? Can you tell me exactly where you are right now? Are there any weapons involved? Can you describe what the suspect looks like? Stay on the line with me - help is on the way."`;
+            } else {
+                return `[${timestamp}] "911, what's your emergency?"
+
+"Can you tell me what happened? When did this occur? Are there any witnesses present? Can you provide your exact location? Officers will be dispatched to your location shortly."`;
+            }
         } else if (category === 'Fire') {
-            questions.push('Is anyone trapped inside?');
-            questions.push('What is burning?');
-            questions.push('Is the fire spreading?');
+            return `[${timestamp}] "911, what's your emergency?"
+
+"Get out of the building immediately if you haven't already. Is anyone trapped inside? What is burning? Is the fire spreading? Stay away from the building and wait for firefighters to arrive."`;
         } else if (category === 'Medical') {
-            questions.push('Is the person conscious?');
-            questions.push('Are they breathing?');
-            questions.push('What are the symptoms?');
+            return `[${timestamp}] "911, what's your emergency?"
+
+"Is the person conscious? Are they breathing? What are their symptoms? When did this start? Stay with them and don't move them unless they're in immediate danger. EMS is on the way."`;
         }
 
-        return questions.slice(0, 3);
+        return `[${timestamp}] "911, what's your emergency? Please stay on the line while I get help to you."`;
     }
 
     mockClassification(transcript) {
@@ -443,14 +446,14 @@ Consider the severity and type of incident.`;
         const urgentBrief = baseUrgentBrief + '\n\n' + detailedSummary;
         
         const summary = this.extractSummaryFromData(transcript, realWorldAnalysis);
-        const questions = this.generateQuestionsFromData(realWorldAnalysis);
+        const suggestedScript = this.generateSuggestedScriptFromData(realWorldAnalysis);
         const classification = this.enhanceClassificationWithData(realWorldAnalysis, dataAnalysis);
         const routing = realWorldAnalysis.routing || this.mockRouting(realWorldAnalysis.category, realWorldAnalysis.priority);
 
         return {
             urgentBrief,
             summary,
-            questions,
+            suggestedScript,
             classification,
             routing,
             dataSource: this.generateDetailedDataSource(realWorldAnalysis, dataAnalysis),
@@ -896,32 +899,43 @@ Consider the severity and type of incident.`;
         return 'No suspects identified';
     }
 
-    generateQuestionsFromData(realWorldAnalysis) {
-        const questions = [];
+    generateSuggestedScriptFromData(realWorldAnalysis) {
+        const timestamp = new Date().toLocaleTimeString();
         const category = realWorldAnalysis.category;
         const priority = realWorldAnalysis.priority;
+        const dataSource = realWorldAnalysis.dataSource || 'Real-world datasets';
         
         if (category === 'Police') {
             if (priority === 'High') {
-                questions.push('Are there any weapons involved?');
-                questions.push('Is anyone injured?');
-                questions.push('Can you describe the suspect(s)?');
+                return `[${timestamp}] "911, what's your emergency?" 
+
+"Stay calm and stay safe. Are you in immediate danger? Can you tell me exactly where you are right now? Are there any weapons involved? Can you describe what the suspect looks like? Stay on the line with me - help is on the way."
+
+[Based on ${dataSource} - High Priority Police Response]`;
             } else {
-                questions.push('What is the nature of the incident?');
-                questions.push('Are there any witnesses?');
-                questions.push('When did this occur?');
+                return `[${timestamp}] "911, what's your emergency?"
+
+"Can you tell me what happened? When did this occur? Are there any witnesses present? Can you provide your exact location? Officers will be dispatched to your location shortly."
+
+[Based on ${dataSource} - Standard Police Response]`;
             }
         } else if (category === 'Fire') {
-            questions.push('Is anyone trapped inside?');
-            questions.push('What is burning?');
-            questions.push('Is the fire spreading?');
+            return `[${timestamp}] "911, what's your emergency?"
+
+"Get out of the building immediately if you haven't already. Is anyone trapped inside? What is burning? Is the fire spreading? Stay away from the building and wait for firefighters to arrive."
+
+[Based on ${dataSource} - Fire Emergency Response]`;
         } else if (category === 'Medical') {
-            questions.push('Is the person conscious?');
-            questions.push('Are they breathing?');
-            questions.push('What are the symptoms?');
+            return `[${timestamp}] "911, what's your emergency?"
+
+"Is the person conscious? Are they breathing? What are their symptoms? When did this start? Stay with them and don't move them unless they're in immediate danger. EMS is on the way."
+
+[Based on ${dataSource} - Medical Emergency Response]`;
         }
 
-        return questions.slice(0, 3);
+        return `[${timestamp}] "911, what's your emergency? Please stay on the line while I get help to you."
+
+[Based on ${dataSource} - General Emergency Response]`;
     }
 
     enhanceClassificationWithData(realWorldAnalysis, dataAnalysis) {
