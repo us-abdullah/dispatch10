@@ -74,7 +74,7 @@ class OllamaIntegration {
         }
     }
 
-    async analyzeIncident(transcript) {
+    async analyzeIncident(transcript, fullTranscript = []) {
         console.log('Analyzing incident with transcript:', transcript.substring(0, 100) + '...');
         
         // First, get real-world classification based on actual 911 data
@@ -87,7 +87,7 @@ class OllamaIntegration {
         // If Ollama is not available, use real-world data-driven analysis
         if (!this.isAvailable) {
             console.log('Using real-world data-driven analysis');
-            return await this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
+            return await this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis, fullTranscript);
         }
 
         const prompt = `You are an AI assistant for 911 dispatch trained on real NYC, Seattle, and NENA datasets. Analyze this emergency call transcript and provide a structured response in JSON format.
@@ -145,7 +145,7 @@ Focus on emergency response needs using real-world data patterns. Be concise and
                 return enhanced;
             } else {
                 console.log('Failed to parse Ollama response, using data-driven analysis');
-                return await this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis);
+                return await this.generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis, fullTranscript);
             }
         } catch (error) {
             console.error('Error analyzing incident with Ollama:', error);
@@ -177,34 +177,45 @@ Be specific about location, suspects, injuries, and immediate threats.`;
         }
     }
 
-    async generateSuggestedScript(transcript, category, priority, realWorldAnalysis) {
+    async generateSuggestedScript(transcript, category, priority, realWorldAnalysis, fullTranscript = []) {
         // If Ollama is not available, use dynamic mock generation
         if (!this.isAvailable) {
-            return this.generateDynamicMockScript(transcript, category, priority, realWorldAnalysis);
+            return this.generateDynamicMockScript(transcript, category, priority, realWorldAnalysis, fullTranscript);
         }
+
+        // Build conversation context
+        const conversationContext = fullTranscript.length > 0 
+            ? fullTranscript.map(entry => `${entry.timestamp}: ${entry.text}`).join('\n')
+            : `${new Date().toLocaleTimeString()}: ${transcript}`;
 
         const prompt = `Generate a live dispatcher response script for this emergency call based on real 911 dispatch protocols.
 
-Transcript: "${transcript}"
-Category: ${category}
-Priority: ${priority}
-Data Sources: ${realWorldAnalysis.dataSource || 'Real-world datasets'}
+CONVERSATION CONTEXT:
+${conversationContext}
 
-Based on actual 911 dispatch protocols from NYC, Seattle, and NENA standards, generate a professional dispatcher response script that includes:
-- Immediate acknowledgment and reassurance
-- Critical information gathering questions
-- Safety instructions for the caller
-- Next steps based on incident type and priority
-- Professional 911 dispatch language and tone
+CURRENT INCIDENT DETAILS:
+- Category: ${category}
+- Priority: ${priority}
+- Latest Message: "${transcript}"
+- Data Sources: ${realWorldAnalysis.dataSource || 'Real-world datasets'}
 
-Return a single, comprehensive script response that a dispatcher can use to respond to this specific call. Use real dispatch protocols and terminology.`;
+INSTRUCTIONS:
+- If this is the FIRST message, generate an initial dispatcher response with assessment questions
+- If this is a FOLLOW-UP message, generate a contextual response based on what the caller just said
+- Continue the natural flow of the conversation
+- Ask specific follow-up questions based on the caller's responses
+- Provide appropriate safety instructions
+- Use professional 911 dispatch terminology
+- Keep responses concise but comprehensive
+
+Based on actual 911 dispatch protocols from NYC, Seattle, and NENA standards, generate a professional dispatcher response script that continues the conversation naturally.`;
 
         try {
             const response = await this.generateResponse(prompt);
             return response.trim();
         } catch (error) {
             console.error('Error generating suggested script:', error);
-            return this.generateDynamicMockScript(transcript, category, priority, realWorldAnalysis);
+            return this.generateDynamicMockScript(transcript, category, priority, realWorldAnalysis, fullTranscript);
         }
     }
 
@@ -376,9 +387,13 @@ Consider the severity and type of incident.`;
         return 'Location to be determined';
     }
 
-    generateDynamicMockScript(transcript, category, priority, realWorldAnalysis) {
+    generateDynamicMockScript(transcript, category, priority, realWorldAnalysis, fullTranscript = []) {
         const timestamp = new Date().toLocaleTimeString();
         const lowerTranscript = transcript.toLowerCase();
+        
+        // Check if this is a follow-up response
+        const isFollowUp = fullTranscript.length > 1;
+        const previousMessage = isFollowUp ? fullTranscript[fullTranscript.length - 2] : null;
         
         // Extract key details from transcript for more specific responses
         const hasWeapon = lowerTranscript.includes('gun') || lowerTranscript.includes('weapon') || lowerTranscript.includes('knife') || lowerTranscript.includes('shot');
@@ -389,8 +404,27 @@ Consider the severity and type of incident.`;
         const isShooting = lowerTranscript.includes('shooting') || lowerTranscript.includes('shot') || lowerTranscript.includes('tires');
         const isRobbery = lowerTranscript.includes('robbed') || lowerTranscript.includes('robbery') || lowerTranscript.includes('stolen');
         const isAssault = lowerTranscript.includes('assault') || lowerTranscript.includes('attacked') || lowerTranscript.includes('beaten');
+        const isFire = lowerTranscript.includes('fire') || lowerTranscript.includes('smoke') || lowerTranscript.includes('burning');
+        const isTrapped = lowerTranscript.includes('trapped') || lowerTranscript.includes('stuck') || lowerTranscript.includes('can\'t get out');
         
-        // Generate unique script based on specific transcript content
+        // Generate contextual follow-up responses
+        if (isFollowUp) {
+            if (category === 'Fire' && isTrapped) {
+                return `[${timestamp}] "I understand people are trapped. Are you safe? Can you see the trapped people? What floor are they on? Are there any visible flames or heavy smoke? Firefighters are on the way - stay on the line with me."`;
+            } else if (category === 'Fire' && isFire) {
+                return `[${timestamp}] "I understand there's a fire alarm and smoke. Are you out of the building? Can you see any flames? What floor is the fire on? Stay away from the building and wait for firefighters."`;
+            } else if (category === 'Police' && isShooting) {
+                return `[${timestamp}] "I understand you're being chased and shot at. Are you still in the vehicle? What's your current location? Are you injured? Keep driving to a safe, public area if possible. Help is on the way."`;
+            } else if (category === 'Police' && isRobbery) {
+                return `[${timestamp}] "I understand you were robbed. Are you safe now? Can you describe what was taken? Did you see the suspect? What did they look like? Officers are responding to your location."`;
+            } else if (category === 'Medical' && hasInjury) {
+                return `[${timestamp}] "I understand the situation. Is the person still conscious? Are they breathing normally? What are their current symptoms? Stay with them - EMS is on the way."`;
+            } else {
+                return `[${timestamp}] "Thank you for that information. Can you tell me more about what's happening? Help is on the way."`;
+            }
+        }
+        
+        // Generate initial responses
         if (isShooting && isVehicle) {
             return `[${timestamp}] "911, what's your emergency?"
 
@@ -514,14 +548,14 @@ Consider the severity and type of incident.`;
         return routing;
     }
 
-    async generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis) {
+    async generateDataDrivenAnalysis(transcript, realWorldAnalysis, dataAnalysis, fullTranscript = []) {
         // Generate analysis based on real-world data
         const baseUrgentBrief = this.generateUrgentBriefFromData(realWorldAnalysis, dataAnalysis);
         const detailedSummary = this.generateDetailedAISummary(transcript, realWorldAnalysis);
         const urgentBrief = baseUrgentBrief + '\n\n' + detailedSummary;
         
         const summary = this.extractSummaryFromData(transcript, realWorldAnalysis);
-        const suggestedScript = await this.generateSuggestedScript(transcript, realWorldAnalysis.category, realWorldAnalysis.priority, realWorldAnalysis);
+        const suggestedScript = await this.generateSuggestedScript(transcript, realWorldAnalysis.category, realWorldAnalysis.priority, realWorldAnalysis, fullTranscript);
         const classification = this.enhanceClassificationWithData(realWorldAnalysis, dataAnalysis);
         const routing = realWorldAnalysis.routing || this.mockRouting(realWorldAnalysis.category, realWorldAnalysis.priority);
 

@@ -408,7 +408,8 @@ class DispatchAI {
         
         try {
             // Generate a quick script response for this specific transcript entry
-            const analysis = await this.analyzeWithAI(transcriptText);
+            // Pass the full transcript array for context
+            const analysis = await this.analyzeWithAI(transcriptText, this.transcript);
             
             if (analysis && analysis.suggestedScript) {
                 // Update the script with this specific response
@@ -454,12 +455,12 @@ class DispatchAI {
         }
     }
 
-    async analyzeWithAI(transcript) {
+    async analyzeWithAI(transcript, fullTranscript = []) {
         try {
             console.log('Starting AI analysis for transcript:', transcript.substring(0, 100) + '...');
             
             // Use Ollama integration for AI analysis
-            const analysis = await this.ollama.analyzeIncident(transcript);
+            const analysis = await this.ollama.analyzeIncident(transcript, fullTranscript);
             
             if (analysis) {
                 console.log('AI analysis completed:', analysis);
