@@ -478,6 +478,55 @@ class DispatchAI {
     mockAIAnalysis(transcript) {
         const lowerTranscript = transcript.toLowerCase();
         
+        // Special demo cases for low priority incidents
+        if (lowerTranscript.includes('nose bleed') || lowerTranscript.includes('nosebleed') || lowerTranscript.includes('nose bleeding')) {
+            return {
+                urgentBrief: '[Low] Medical call - Nose bleed reported\n\n📞 INCIDENT: Nose bleed\n👤 Caller: Reporting minor medical issue\n⏱️ Target Response: 20+ minutes (Low Priority)',
+                summary: {
+                    who: 'Caller reporting nose bleed',
+                    what: 'Nose bleed - Minor medical issue',
+                    where: 'Location to be determined',
+                    when: 'Just occurred',
+                    injuries: 'Minor - Nose bleed',
+                    suspects: 'None - Medical call'
+                },
+                suggestedScript: `[${new Date().toLocaleTimeString()}] "911, what's your emergency?"\n\n"Is the nose bleed severe? Are you able to stop it with pressure? Is this a recurring issue? Please apply gentle pressure to the nose and lean forward slightly. This is a low priority call - help will be dispatched when available."`,
+                classification: {
+                    category: 'Medical',
+                    priority: 'Low',
+                    confidence: 25
+                },
+                routing: ['Basic Life Support'],
+                dataSource: 'NYPD & Seattle FD Records',
+                severityLevel: 3,
+                nenaCode: 'P3 - Low priority - 20+ min response'
+            };
+        }
+        
+        if (lowerTranscript.includes('pizza')) {
+            return {
+                urgentBrief: '[Low] Possible prank call - Pizza mentioned\n\n📞 INCIDENT: Possible prank call\n👤 Caller: Mentioned pizza in call\n⏱️ Target Response: 30+ minutes (Non-emergency)',
+                summary: {
+                    who: 'Caller mentioning pizza',
+                    what: 'Possible prank call - Pizza reference',
+                    where: 'Location to be determined',
+                    when: 'Just occurred',
+                    injuries: 'None reported',
+                    suspects: 'Caller - Possible prank'
+                },
+                suggestedScript: `[${new Date().toLocaleTimeString()}] "911, what's your emergency?"\n\n"I understand you mentioned pizza. Can you please tell me what your actual emergency is? If this is not a real emergency, please hang up so we can help people with genuine emergencies. Misuse of 911 is a crime."`,
+                classification: {
+                    category: 'Police',
+                    priority: 'Low',
+                    confidence: 15
+                },
+                routing: ['Patrol Unit'],
+                dataSource: 'NYPD & Seattle FD Records',
+                severityLevel: 2,
+                nenaCode: 'P4 - Non-emergency - 30+ min response'
+            };
+        }
+        
         // Determine incident type and priority
         let category = 'Police';
         let priority = 'Low';
