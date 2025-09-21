@@ -178,6 +178,11 @@ Be specific about location, suspects, injuries, and immediate threats.`;
     }
 
     async generateSuggestedScript(transcript, category, priority, realWorldAnalysis) {
+        // If Ollama is not available, use dynamic mock generation
+        if (!this.isAvailable) {
+            return this.generateDynamicMockScript(transcript, category, priority, realWorldAnalysis);
+        }
+
         const prompt = `Generate a live dispatcher response script for this emergency call based on real 911 dispatch protocols.
 
 Transcript: "${transcript}"
@@ -199,7 +204,7 @@ Return a single, comprehensive script response that a dispatcher can use to resp
             return response.trim();
         } catch (error) {
             console.error('Error generating suggested script:', error);
-            return this.generateMockSuggestedScript(category, priority, realWorldAnalysis);
+            return this.generateDynamicMockScript(transcript, category, priority, realWorldAnalysis);
         }
     }
 
@@ -371,6 +376,76 @@ Consider the severity and type of incident.`;
         return 'Location to be determined';
     }
 
+    generateDynamicMockScript(transcript, category, priority, realWorldAnalysis) {
+        const timestamp = new Date().toLocaleTimeString();
+        const lowerTranscript = transcript.toLowerCase();
+        
+        // Extract key details from transcript for more specific responses
+        const hasWeapon = lowerTranscript.includes('gun') || lowerTranscript.includes('weapon') || lowerTranscript.includes('knife') || lowerTranscript.includes('shot');
+        const hasInjury = lowerTranscript.includes('hurt') || lowerTranscript.includes('injured') || lowerTranscript.includes('bleeding') || lowerTranscript.includes('unconscious');
+        const hasLocation = lowerTranscript.includes('street') || lowerTranscript.includes('avenue') || lowerTranscript.includes('road') || lowerTranscript.includes('building');
+        const isChasing = lowerTranscript.includes('chasing') || lowerTranscript.includes('fleeing') || lowerTranscript.includes('running');
+        const isVehicle = lowerTranscript.includes('car') || lowerTranscript.includes('truck') || lowerTranscript.includes('vehicle');
+        const isShooting = lowerTranscript.includes('shooting') || lowerTranscript.includes('shot') || lowerTranscript.includes('tires');
+        const isRobbery = lowerTranscript.includes('robbed') || lowerTranscript.includes('robbery') || lowerTranscript.includes('stolen');
+        const isAssault = lowerTranscript.includes('assault') || lowerTranscript.includes('attacked') || lowerTranscript.includes('beaten');
+        
+        // Generate unique script based on specific transcript content
+        if (isShooting && isVehicle) {
+            return `[${timestamp}] "911, what's your emergency?"
+
+"Stay calm and stay safe. Are you in immediate danger? Can you tell me exactly where you are right now? What direction are you heading? What does the suspect vehicle look like? Are there any weapons involved? Stay on the line with me - help is on the way."`;
+        } else if (isRobbery) {
+            return `[${timestamp}] "911, what's your emergency?"
+
+"Stay calm and stay safe. Are you in immediate danger? Can you tell me exactly where you are right now? What was taken? Can you describe the suspect? Are there any weapons involved? Stay on the line with me - help is on the way."`;
+        } else if (isAssault) {
+            return `[${timestamp}] "911, what's your emergency?"
+
+"Stay calm and stay safe. Are you in immediate danger? Can you tell me exactly where you are right now? Are you injured? Can you describe the suspect? Are there any weapons involved? Stay on the line with me - help is on the way."`;
+        } else if (isChasing && isVehicle) {
+            return `[${timestamp}] "911, what's your emergency?"
+
+"Stay calm and stay safe. Are you in immediate danger? Can you tell me exactly where you are right now? What direction are you heading? What does the suspect vehicle look like? Stay on the line with me - help is on the way."`;
+        } else if (hasWeapon) {
+            return `[${timestamp}] "911, what's your emergency?"
+
+"Stay calm and stay safe. Are you in immediate danger? Can you tell me exactly where you are right now? Are there any weapons involved? Can you describe what the suspect looks like? Stay on the line with me - help is on the way."`;
+        } else if (category === 'Fire') {
+            if (hasInjury) {
+                return `[${timestamp}] "911, what's your emergency?"
+
+"Get out of the building immediately if you haven't already. Is anyone trapped inside? What is burning? Is the fire spreading? Are there any injuries? Stay away from the building and wait for firefighters to arrive."`;
+            } else {
+                return `[${timestamp}] "911, what's your emergency?"
+
+"Get out of the building immediately if you haven't already. Is anyone trapped inside? What is burning? Is the fire spreading? Stay away from the building and wait for firefighters to arrive."`;
+            }
+        } else if (category === 'Medical') {
+            if (hasInjury) {
+                return `[${timestamp}] "911, what's your emergency?"
+
+"Is the person conscious? Are they breathing? What are their symptoms? When did this start? Stay with them and don't move them unless they're in immediate danger. EMS is on the way."`;
+            } else {
+                return `[${timestamp}] "911, what's your emergency?"
+
+"Is the person conscious? Are they breathing? What are their symptoms? When did this start? Stay with them and don't move them unless they're in immediate danger. EMS is on the way."`;
+            }
+        } else if (category === 'Police') {
+            if (priority === 'High') {
+                return `[${timestamp}] "911, what's your emergency?"
+
+"Stay calm and stay safe. Are you in immediate danger? Can you tell me exactly where you are right now? Are there any weapons involved? Can you describe what the suspect looks like? Stay on the line with me - help is on the way."`;
+            } else {
+                return `[${timestamp}] "911, what's your emergency?"
+
+"Can you tell me what happened? When did this occur? Are there any witnesses present? Can you provide your exact location? Officers will be dispatched to your location shortly."`;
+            }
+        }
+
+        return `[${timestamp}] "911, what's your emergency? Please stay on the line while I get help to you."`;
+    }
+
     generateMockSuggestedScript(category, priority) {
         const timestamp = new Date().toLocaleTimeString();
         
@@ -446,7 +521,7 @@ Consider the severity and type of incident.`;
         const urgentBrief = baseUrgentBrief + '\n\n' + detailedSummary;
         
         const summary = this.extractSummaryFromData(transcript, realWorldAnalysis);
-        const suggestedScript = this.generateSuggestedScriptFromData(realWorldAnalysis);
+        const suggestedScript = await this.generateSuggestedScript(transcript, realWorldAnalysis.category, realWorldAnalysis.priority, realWorldAnalysis);
         const classification = this.enhanceClassificationWithData(realWorldAnalysis, dataAnalysis);
         const routing = realWorldAnalysis.routing || this.mockRouting(realWorldAnalysis.category, realWorldAnalysis.priority);
 

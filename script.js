@@ -214,6 +214,8 @@ class DispatchAI {
             this.transcript.push(entry);
             // Process transcript for AI analysis when we have new final text
             this.processTranscriptForAI();
+            // Also generate script for this specific transcript entry
+            this.generateScriptForEntry(entry.text);
         }
 
         this.displayTranscript();
@@ -288,6 +290,20 @@ class DispatchAI {
                 this.showAIProcessing(false);
             }
         }, 2000); // Wait 2 seconds after last transcript update
+    }
+
+    async generateScriptForEntry(transcriptText) {
+        try {
+            // Generate a quick script response for this specific transcript entry
+            const analysis = await this.analyzeWithAI(transcriptText);
+            
+            if (analysis && analysis.suggestedScript) {
+                // Update the script with this specific response
+                this.updateSuggestedScript(analysis.suggestedScript);
+            }
+        } catch (error) {
+            console.error('Script generation error:', error);
+        }
     }
 
     async processTranscript(text) {
@@ -515,13 +531,11 @@ class DispatchAI {
 
     updateSuggestedScript(script) {
         if (!script || script.trim() === '') {
-            this.suggestedScript.value = '';
             return;
         }
 
-        // Append new script content with timestamp
-        const timestamp = new Date().toLocaleTimeString();
-        const scriptEntry = `[${timestamp}] ${script}\n\n`;
+        // Append new script content (script already has timestamp from generation)
+        const scriptEntry = `${script}\n\n`;
         
         // Add to existing content
         this.suggestedScript.value += scriptEntry;
