@@ -208,7 +208,21 @@ class DispatchAI {
         if (!this.isRecording || this.isPaused) return;
 
         this.isPaused = true;
-        this.recognition.stop();
+        this.isRecording = false;
+        
+        // Stop speech recognition
+        try {
+            this.recognition.stop();
+        } catch (error) {
+            console.log('Recognition already stopped or error stopping:', error);
+        }
+        
+        // Clear any pending AI processing
+        if (this.aiProcessingTimer) {
+            clearTimeout(this.aiProcessingTimer);
+            this.aiProcessingTimer = null;
+        }
+        
         this.pauseDispatchTimer();
         
         this.pauseCallBtn.textContent = '▶️ Resume';
@@ -222,7 +236,24 @@ class DispatchAI {
         if (!this.isPaused) return;
 
         this.isPaused = false;
-        this.recognition.start();
+        this.isRecording = true;
+        
+        // Start speech recognition
+        try {
+            this.recognition.start();
+        } catch (error) {
+            console.log('Error starting recognition:', error);
+            // If recognition fails to start, try to reinitialize
+            this.initializeSpeechRecognition();
+            try {
+                this.recognition.start();
+            } catch (retryError) {
+                console.error('Failed to restart recognition:', retryError);
+                this.showError('Failed to resume recording');
+                return;
+            }
+        }
+        
         this.resumeDispatchTimer();
         
         this.pauseCallBtn.textContent = '⏸️ Pause';
@@ -258,10 +289,13 @@ class DispatchAI {
 
         if (isFinal) {
             this.transcript.push(entry);
-            // Process transcript for AI analysis when we have new final text
-            this.processTranscriptForAI();
-            // Also generate script for this specific transcript entry
-            this.generateScriptForEntry(entry.text);
+            // Only process if not paused
+            if (!this.isPaused) {
+                // Process transcript for AI analysis when we have new final text
+                this.processTranscriptForAI();
+                // Also generate script for this specific transcript entry
+                this.generateScriptForEntry(entry.text);
+            }
         }
 
         this.displayTranscript();
@@ -291,6 +325,11 @@ class DispatchAI {
     }
 
     async processTranscriptForAI() {
+        // Don't process AI if paused
+        if (this.isPaused) {
+            return;
+        }
+        
         // Clear any existing timer
         if (this.aiProcessingTimer) {
             clearTimeout(this.aiProcessingTimer);
@@ -298,6 +337,11 @@ class DispatchAI {
         
         // Throttle AI processing to avoid too many calls
         this.aiProcessingTimer = setTimeout(async () => {
+            // Double-check pause state before processing
+            if (this.isPaused) {
+                return;
+            }
+            
             try {
                 // Get full transcript for analysis
                 const fullTranscript = this.transcript.map(entry => entry.text).join(' ');
@@ -339,6 +383,11 @@ class DispatchAI {
     }
 
     async generateScriptForEntry(transcriptText) {
+        // Don't generate script if paused
+        if (this.isPaused) {
+            return;
+        }
+        
         try {
             // Generate a quick script response for this specific transcript entry
             const analysis = await this.analyzeWithAI(transcriptText);
