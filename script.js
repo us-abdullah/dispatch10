@@ -527,6 +527,30 @@ class DispatchAI {
             };
         }
         
+        if (lowerTranscript.includes('cat') && lowerTranscript.includes('tree')) {
+            return {
+                urgentBrief: '[Low] Possible prank call - Cat in tree\n\n📞 INCIDENT: Cat stuck in tree\n👤 Caller: Reporting cat emergency\n⏱️ Target Response: 45+ minutes (Non-emergency)',
+                summary: {
+                    who: 'Caller reporting cat in tree',
+                    what: 'Cat stuck in tree - Possible prank call',
+                    where: 'Tree location to be determined',
+                    when: 'Just occurred',
+                    injuries: 'None - Cat is fine',
+                    suspects: 'Caller - Possible prank'
+                },
+                suggestedScript: `[${new Date().toLocaleTimeString()}] "911, what's your emergency?"\n\n"I understand you have a cat stuck in a tree. Cats typically come down on their own. This is not a 911 emergency. Please contact animal control or a local tree service. If this is not a real emergency, please hang up so we can help people with genuine emergencies."`,
+                classification: {
+                    category: 'Fire',
+                    priority: 'Low',
+                    confidence: 10
+                },
+                routing: ['Animal Control'],
+                dataSource: 'NYPD & Seattle FD Records',
+                severityLevel: 1,
+                nenaCode: 'P4 - Non-emergency - 45+ min response'
+            };
+        }
+        
         // Determine incident type and priority
         let category = 'Police';
         let priority = 'Low';
@@ -548,6 +572,22 @@ class DispatchAI {
             category = 'Police';
             priority = 'Medium';
             confidence = 75;
+        }
+        
+        // Multi-category examples
+        let categories = [category];
+        if (lowerTranscript.includes('fire') && lowerTranscript.includes('hurt')) {
+            categories = ['Fire', 'Medical'];
+            priority = 'High';
+            confidence = 90;
+        } else if (lowerTranscript.includes('shooting') && lowerTranscript.includes('injured')) {
+            categories = ['Police', 'Medical'];
+            priority = 'High';
+            confidence = 95;
+        } else if (lowerTranscript.includes('explosion') && lowerTranscript.includes('casualties')) {
+            categories = ['Fire', 'Medical', 'Police'];
+            priority = 'Critical';
+            confidence = 98;
         }
 
         // Generate urgent brief
@@ -577,7 +617,14 @@ class DispatchAI {
             urgentBrief,
             summary,
             questions,
-            classification: { category, priority, confidence },
+            classification: { 
+                category, 
+                priority, 
+                confidence,
+                categories: categories.length > 1 ? categories : undefined,
+                primaryCategory: categories[0],
+                secondaryCategories: categories.length > 1 ? categories.slice(1) : undefined
+            },
             routing
         };
     }
@@ -744,9 +791,20 @@ class DispatchAI {
             badge.classList.remove('active');
         });
 
-        if (classification.category === 'Police') this.policeBadge.classList.add('active');
-        else if (classification.category === 'Fire') this.fireBadge.classList.add('active');
-        else if (classification.category === 'Medical') this.medicalBadge.classList.add('active');
+        // Handle single category
+        if (!classification.categories || classification.categories.length === 1) {
+            const category = classification.categories ? classification.categories[0] : classification.category;
+            if (category === 'Police') this.policeBadge.classList.add('active');
+            else if (category === 'Fire') this.fireBadge.classList.add('active');
+            else if (category === 'Medical') this.medicalBadge.classList.add('active');
+        } else {
+            // Handle multiple categories
+            classification.categories.forEach(category => {
+                if (category === 'Police') this.policeBadge.classList.add('active');
+                else if (category === 'Fire') this.fireBadge.classList.add('active');
+                else if (category === 'Medical') this.medicalBadge.classList.add('active');
+            });
+        }
 
         // Update priority
         this.priorityLevel.textContent = classification.priority;

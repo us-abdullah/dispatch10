@@ -157,6 +157,19 @@ class RealWorldClassification {
             };
         }
         
+        if (lowerTranscript.includes('cat') && lowerTranscript.includes('tree')) {
+            return {
+                category: 'Fire',
+                priority: 'Low',
+                confidence: 10,
+                nenaCode: 'P4',
+                keywords: ['CAT_TREE', 'POSSIBLE_PRANK'],
+                urgency: 'low',
+                severity: 1,
+                specialNote: 'Cat in tree - Possible prank call'
+            };
+        }
+        
         // Extract keywords and patterns
         const keywords = this.extractKeywords(lowerTranscript);
         const urgencyIndicators = this.detectUrgencyIndicators(lowerTranscript);
@@ -165,7 +178,59 @@ class RealWorldClassification {
         // Apply classification logic based on real data patterns
         const classification = this.applyRealWorldClassification(keywords, urgencyIndicators, locationContext);
         
+        // Check for multi-category incidents
+        const multiCategory = this.detectMultiCategoryIncidents(lowerTranscript, keywords);
+        if (multiCategory) {
+            classification.categories = multiCategory.categories;
+            classification.primaryCategory = multiCategory.primaryCategory;
+            classification.secondaryCategories = multiCategory.secondaryCategories;
+        }
+        
         return classification;
+    }
+
+    detectMultiCategoryIncidents(transcript, keywords) {
+        const categories = [];
+        const lowerTranscript = transcript.toLowerCase();
+        
+        // Fire + Medical (e.g., "fire with injuries", "explosion with casualties")
+        if ((lowerTranscript.includes('fire') || lowerTranscript.includes('explosion') || lowerTranscript.includes('smoke')) &&
+            (lowerTranscript.includes('hurt') || lowerTranscript.includes('injured') || lowerTranscript.includes('casualties') || lowerTranscript.includes('medical'))) {
+            categories.push('Fire', 'Medical');
+        }
+        
+        // Police + Medical (e.g., "shooting with injuries", "assault with medical emergency")
+        if ((lowerTranscript.includes('shooting') || lowerTranscript.includes('assault') || lowerTranscript.includes('robbery') || lowerTranscript.includes('fight')) &&
+            (lowerTranscript.includes('hurt') || lowerTranscript.includes('injured') || lowerTranscript.includes('bleeding') || lowerTranscript.includes('unconscious'))) {
+            categories.push('Police', 'Medical');
+        }
+        
+        // Fire + Police (e.g., "arson", "suspicious fire")
+        if ((lowerTranscript.includes('fire') || lowerTranscript.includes('arson') || lowerTranscript.includes('suspicious')) &&
+            (lowerTranscript.includes('suspect') || lowerTranscript.includes('criminal') || lowerTranscript.includes('intentional') || lowerTranscript.includes('arson'))) {
+            categories.push('Fire', 'Police');
+        }
+        
+        // All three categories (e.g., "explosion with casualties and suspects")
+        if ((lowerTranscript.includes('explosion') || lowerTranscript.includes('bomb')) &&
+            (lowerTranscript.includes('hurt') || lowerTranscript.includes('injured')) &&
+            (lowerTranscript.includes('suspect') || lowerTranscript.includes('terrorist') || lowerTranscript.includes('criminal'))) {
+            categories.push('Fire', 'Medical', 'Police');
+        }
+        
+        if (categories.length > 1) {
+            // Remove duplicates
+            const uniqueCategories = [...new Set(categories)];
+            
+            return {
+                categories: uniqueCategories,
+                primaryCategory: uniqueCategories[0], // First category is primary
+                secondaryCategories: uniqueCategories.slice(1),
+                multiCategory: true
+            };
+        }
+        
+        return null;
     }
 
     extractKeywords(transcript) {
